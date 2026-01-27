@@ -1,5 +1,6 @@
 import Foundation
 import Core
+import MCPServer
 
 // MARK: - Calendar Factories
 
@@ -253,21 +254,30 @@ public func makeTestPage<T: Codable & Sendable>(
 /// await services.calendar.setStubEvents([makeTestEvent()])
 /// let events = try await services.calendar.listEvents(limit: 10, from: nil, to: nil, cursor: nil)
 /// ```
-public struct TestServices: Sendable {
+public struct TestServices: AppleServicesProtocol, Sendable {
     /// Mock calendar service.
-    public let calendar: MockCalendarService
+    public let calendar: any CalendarService
     /// Mock reminders service.
-    public let reminders: MockRemindersService
+    public let reminders: any RemindersService
     /// Mock contacts service.
-    public let contacts: MockContactsService
+    public let contacts: any ContactsService
     /// Mock notes service.
-    public let notes: MockNotesService
+    public let notes: any NotesService
     /// Mock messages service.
-    public let messages: MockMessagesService
+    public let messages: any MessagesService
     /// Mock mail service.
-    public let mail: MockMailService
+    public let mail: any MailService
     /// Mock maps service.
-    public let maps: MockMapsService
+    public let maps: any MapsService
+
+    // Typed accessors for test setup convenience
+    public var mockCalendar: MockCalendarService { calendar as! MockCalendarService }
+    public var mockReminders: MockRemindersService { reminders as! MockRemindersService }
+    public var mockContacts: MockContactsService { contacts as! MockContactsService }
+    public var mockNotes: MockNotesService { notes as! MockNotesService }
+    public var mockMessages: MockMessagesService { messages as! MockMessagesService }
+    public var mockMail: MockMailService { mail as! MockMailService }
+    public var mockMaps: MockMapsService { maps as! MockMapsService }
 
     /// Creates a new test services container with fresh mocks.
     public init() {

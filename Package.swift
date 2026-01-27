@@ -22,7 +22,7 @@ let package = Package(
         .target(name: "MCPServer", dependencies: ["Core", "Adapters", .product(name: "MCP", package: "swift-sdk")]),
         .target(
             name: "TestUtilities",
-            dependencies: ["Core"],
+            dependencies: ["Core", "MCPServer"],
             path: "Tests/TestUtilities"
         ),
         .testTarget(name: "CoreTests", dependencies: ["Core", "TestUtilities"]),
