@@ -242,3 +242,47 @@ public func makeTestPage<T: Codable & Sendable>(
 ) -> Page<T> {
     Page(items: items, nextCursor: nextCursor, hasMore: hasMore)
 }
+
+// MARK: - Services Factory
+
+/// Container for all mock services, used for testing service integration.
+///
+/// ## Example
+/// ```swift
+/// let services = makeTestServices()
+/// await services.calendar.setStubEvents([makeTestEvent()])
+/// let events = try await services.calendar.listEvents(limit: 10, from: nil, to: nil, cursor: nil)
+/// ```
+public struct TestServices: Sendable {
+    /// Mock calendar service.
+    public let calendar: MockCalendarService
+    /// Mock reminders service.
+    public let reminders: MockRemindersService
+    /// Mock contacts service.
+    public let contacts: MockContactsService
+    /// Mock notes service.
+    public let notes: MockNotesService
+    /// Mock messages service.
+    public let messages: MockMessagesService
+    /// Mock mail service.
+    public let mail: MockMailService
+    /// Mock maps service.
+    public let maps: MockMapsService
+
+    /// Creates a new test services container with fresh mocks.
+    public init() {
+        self.calendar = MockCalendarService()
+        self.reminders = MockRemindersService()
+        self.contacts = MockContactsService()
+        self.notes = MockNotesService()
+        self.messages = MockMessagesService()
+        self.mail = MockMailService()
+        self.maps = MockMapsService()
+    }
+}
+
+/// Creates a container with all mock services for integration testing.
+/// - Returns: A `TestServices` instance with fresh mock implementations.
+public func makeTestServices() -> TestServices {
+    TestServices()
+}

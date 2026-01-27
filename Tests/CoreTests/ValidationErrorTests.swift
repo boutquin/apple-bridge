@@ -30,12 +30,20 @@ struct ValidationErrorTests {
         #expect(error.userMessage.contains("date"))
     }
 
+    @Test func testValidationErrorNotFound() {
+        let error = ValidationError.notFound(resource: "CalendarEvent", id: "E123")
+        #expect(error.userMessage.contains("CalendarEvent"))
+        #expect(error.userMessage.contains("E123"))
+        #expect(error.userMessage.contains("not found"))
+    }
+
     @Test func testAllValidationErrorsAreSendable() {
         let errors: [ValidationError] = [
             .missingRequired(field: "test"),
             .invalidFormat(field: "test", expected: "format"),
             .invalidCursor(reason: "reason"),
-            .invalidField(field: "test", allowed: ["a", "b"])
+            .invalidField(field: "test", allowed: ["a", "b"]),
+            .notFound(resource: "Resource", id: "123")
         ]
         Task { @Sendable in
             _ = errors

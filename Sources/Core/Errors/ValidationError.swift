@@ -35,6 +35,9 @@ public enum ValidationError: Error, Sendable {
     /// An unknown field name was requested (e.g., in a sort or filter).
     case invalidField(field: String, allowed: [String])
 
+    /// A requested resource was not found.
+    case notFound(resource: String, id: String)
+
     /// A user-friendly message describing the validation error.
     public var userMessage: String {
         switch self {
@@ -46,6 +49,8 @@ public enum ValidationError: Error, Sendable {
             return "Invalid cursor: \(reason)"
         case .invalidField(let field, let allowed):
             return "Invalid field '\(field)'. Valid fields: \(allowed.joined(separator: ", "))"
+        case .notFound(let resource, let id):
+            return "\(resource) not found: \(id)"
         }
     }
 }
