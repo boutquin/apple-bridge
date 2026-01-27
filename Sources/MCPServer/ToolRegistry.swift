@@ -99,7 +99,13 @@ public actor ToolRegistry {
     }
 
     /// Updates the handler for an existing tool.
+    ///
     /// This method will be used in Phases 5-12 to wire real handlers.
+    ///
+    /// - Parameters:
+    ///   - name: The name of the tool to update.
+    ///   - handler: The new handler to use for this tool.
+    /// - Note: If the tool doesn't exist, this method does nothing.
     public func setHandler(for name: String, handler: @escaping ToolHandler) {
         guard let entry = tools[name] else { return }
         tools[name] = ToolEntry(definition: entry.definition, handler: handler)

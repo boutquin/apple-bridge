@@ -45,6 +45,16 @@ public struct AppleServices: AppleServicesProtocol, Sendable {
     public let mail: any MailService
     public let maps: any MapsService
 
+    /// Creates a new Apple services container.
+    ///
+    /// - Parameters:
+    ///   - calendar: The calendar service implementation.
+    ///   - reminders: The reminders service implementation.
+    ///   - contacts: The contacts service implementation.
+    ///   - notes: The notes service implementation.
+    ///   - messages: The messages service implementation.
+    ///   - mail: The mail service implementation.
+    ///   - maps: The maps service implementation.
     public init(
         calendar: any CalendarService,
         reminders: any RemindersService,
