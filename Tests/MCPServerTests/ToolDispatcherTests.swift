@@ -33,8 +33,8 @@ struct ToolDispatcherTests {
         let registry = ToolRegistry.create(services: services)
         let dispatcher = ToolDispatcher(registry: registry)
 
-        // All tools return NOT_IMPLEMENTED in Phase 4
-        let result = await dispatcher.dispatch(name: "calendar_list", arguments: nil)
+        // Use a tool that's still a stub (reminders_list) - calendar tools are now implemented
+        let result = await dispatcher.dispatch(name: "reminders_list", arguments: nil)
 
         #expect(result.isError == true)
 

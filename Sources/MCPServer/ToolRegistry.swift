@@ -51,8 +51,8 @@ public actor ToolRegistry {
     public static func create(services: any AppleServicesProtocol) -> ToolRegistry {
         var tools: [String: ToolEntry] = [:]
 
-        // Calendar tools (6)
-        registerCalendarTools(into: &tools)
+        // Calendar tools (6) - Phase 5: Real handlers wired
+        registerCalendarTools(into: &tools, services: services)
 
         // Reminders tools (8)
         registerRemindersTools(into: &tools)
@@ -136,10 +136,28 @@ public actor ToolRegistry {
         tools[name] = ToolEntry(definition: definition, handler: handler)
     }
 
+    /// Registers a tool with a real handler implementation.
+    private static func registerWithHandler(
+        into tools: inout [String: ToolEntry],
+        name: String,
+        description: String,
+        inputSchema: Value,
+        handler: @escaping ToolHandler
+    ) {
+        let definition = Tool(
+            name: name,
+            description: description,
+            inputSchema: inputSchema
+        )
+
+        tools[name] = ToolEntry(definition: definition, handler: handler)
+    }
+
     // MARK: - Calendar Tools (6)
 
-    private static func registerCalendarTools(into tools: inout [String: ToolEntry]) {
-        register(
+    /// Registers calendar tools with real handlers (Phase 5).
+    private static func registerCalendarTools(into tools: inout [String: ToolEntry], services: any AppleServicesProtocol) {
+        registerWithHandler(
             into: &tools,
             name: "calendar_list",
             description: "List calendar events within a date range",
@@ -151,10 +169,11 @@ public actor ToolRegistry {
                     "to": .object(["type": "string", "description": "End date in ISO 8601 format"]),
                     "cursor": .object(["type": "string", "description": "Pagination cursor"])
                 ])
-            ])
+            ]),
+            handler: { args in await CalendarHandlers.listEvents(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "calendar_search",
             description: "Search calendar events by query",
@@ -168,10 +187,11 @@ public actor ToolRegistry {
                     "cursor": .object(["type": "string", "description": "Pagination cursor"])
                 ]),
                 "required": .array([.string("query")])
-            ])
+            ]),
+            handler: { args in await CalendarHandlers.searchEvents(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "calendar_get",
             description: "Get a calendar event by ID",
@@ -181,10 +201,11 @@ public actor ToolRegistry {
                     "id": .object(["type": "string", "description": "Event ID"])
                 ]),
                 "required": .array([.string("id")])
-            ])
+            ]),
+            handler: { args in await CalendarHandlers.getEvent(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "calendar_create",
             description: "Create a new calendar event",
@@ -199,10 +220,11 @@ public actor ToolRegistry {
                     "notes": .object(["type": "string", "description": "Event notes"])
                 ]),
                 "required": .array([.string("title"), .string("startDate"), .string("endDate")])
-            ])
+            ]),
+            handler: { args in await CalendarHandlers.createEvent(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "calendar_update",
             description: "Update an existing calendar event",
@@ -217,10 +239,11 @@ public actor ToolRegistry {
                     "notes": .object(["type": "string", "description": "New event notes"])
                 ]),
                 "required": .array([.string("id")])
-            ])
+            ]),
+            handler: { args in await CalendarHandlers.updateEvent(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "calendar_delete",
             description: "Delete a calendar event",
@@ -230,7 +253,8 @@ public actor ToolRegistry {
                     "id": .object(["type": "string", "description": "Event ID"])
                 ]),
                 "required": .array([.string("id")])
-            ])
+            ]),
+            handler: { args in await CalendarHandlers.deleteEvent(services: services, arguments: args) }
         )
     }
 
