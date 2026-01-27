@@ -296,3 +296,31 @@ public struct TestServices: AppleServicesProtocol, Sendable {
 public func makeTestServices() -> TestServices {
     TestServices()
 }
+
+// MARK: - MCP Infrastructure Factories
+
+/// Creates a ToolRegistry with mock services for testing.
+///
+/// ## Example
+/// ```swift
+/// let registry = makeTestRegistry()
+/// let definitions = await registry.definitions
+/// let result = await registry.callTool(name: "calendar_list", arguments: nil)
+/// ```
+/// - Returns: A `ToolRegistry` instance configured with mock services.
+public func makeTestRegistry() -> ToolRegistry {
+    ToolRegistry.create(services: makeTestServices())
+}
+
+/// Creates a ToolDispatcher with mock services for testing.
+///
+/// ## Example
+/// ```swift
+/// let dispatcher = makeTestDispatcher()
+/// let result = await dispatcher.dispatch(name: "calendar_list", arguments: nil)
+/// ```
+/// - Parameter timeout: The timeout duration for tool calls. Defaults to 30 seconds.
+/// - Returns: A `ToolDispatcher` instance configured with mock services.
+public func makeTestDispatcher(timeout: Duration = .seconds(30)) -> ToolDispatcher {
+    ToolDispatcher(registry: makeTestRegistry(), timeout: timeout)
+}
