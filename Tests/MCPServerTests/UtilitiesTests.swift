@@ -88,4 +88,38 @@ struct UtilitiesTests {
         let structResult = try await withTimeout(duration: .seconds(1)) { Data(value: 5) }
         #expect(structResult == Data(value: 5))
     }
+
+    @Test("withTimeout cancels operation when timeout occurs")
+    func testTimeoutWrapperCancelsOperation() async throws {
+        // Use actor to safely track cancellation across task boundaries
+        actor CancellationTracker {
+            var wasCancelled = false
+            func markCancelled() { wasCancelled = true }
+            func checkCancelled() -> Bool { wasCancelled }
+        }
+
+        let tracker = CancellationTracker()
+
+        do {
+            _ = try await withTimeout(duration: .milliseconds(50)) {
+                // Long-running operation that checks for cancellation
+                do {
+                    try await Task.sleep(for: .seconds(10))
+                } catch is CancellationError {
+                    await tracker.markCancelled()
+                    throw CancellationError()
+                }
+                return "should not reach"
+            }
+            #expect(Bool(false), "Expected timeout error")
+        } catch is ToolError {
+            // Expected - timeout occurred
+        }
+
+        // Give a moment for cancellation to propagate
+        try await Task.sleep(for: .milliseconds(100))
+
+        let wasCancelled = await tracker.checkCancelled()
+        #expect(wasCancelled == true, "Operation should have been cancelled when timeout occurred")
+    }
 }
