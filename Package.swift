@@ -20,9 +20,14 @@ let package = Package(
         .target(name: "Core"),
         .target(name: "Adapters", dependencies: ["Core"]),
         .target(name: "MCPServer", dependencies: ["Core", "Adapters", .product(name: "MCP", package: "swift-sdk")]),
-        .testTarget(name: "CoreTests", dependencies: ["Core"]),
-        .testTarget(name: "AdapterTests", dependencies: ["Adapters"]),
-        .testTarget(name: "MCPServerTests", dependencies: ["MCPServer"]),
+        .target(
+            name: "TestUtilities",
+            dependencies: ["Core"],
+            path: "Tests/TestUtilities"
+        ),
+        .testTarget(name: "CoreTests", dependencies: ["Core", "TestUtilities"]),
+        .testTarget(name: "AdapterTests", dependencies: ["Adapters", "TestUtilities"]),
+        .testTarget(name: "MCPServerTests", dependencies: ["MCPServer", "TestUtilities"]),
         .testTarget(name: "E2ETests", dependencies: ["apple-bridge"])
     ]
 )
