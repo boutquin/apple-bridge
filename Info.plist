@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.boutquin.apple-bridge</string>
+    <key>CFBundleName</key>
+    <string>Apple Bridge</string>
+    <key>CFBundleDisplayName</key>
+    <string>Apple Bridge</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleExecutable</key>
+    <string>apple-bridge</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+
+    <!-- Privacy Usage Descriptions -->
+    <key>NSCalendarsUsageDescription</key>
+    <string>Apple Bridge needs access to your calendars to list, create, update, and delete calendar events on behalf of your AI assistant.</string>
+
+    <key>NSRemindersUsageDescription</key>
+    <string>Apple Bridge needs access to your reminders to list, create, update, complete, and delete reminders on behalf of your AI assistant.</string>
+
+    <key>NSContactsUsageDescription</key>
+    <string>Apple Bridge needs access to your contacts to search and retrieve contact information on behalf of your AI assistant.</string>
+
+    <key>NSAppleEventsUsageDescription</key>
+    <string>Apple Bridge needs to send Apple Events to control Mail and Maps applications on behalf of your AI assistant.</string>
+
+    <!-- Full Disk Access explanation (informational - actual permission granted in System Settings) -->
+    <!-- Notes and Messages access requires Full Disk Access to read SQLite databases -->
+</dict>
+</plist>

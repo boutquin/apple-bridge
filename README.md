@@ -181,6 +181,58 @@ Apple Bridge implements MCP specification 2024-11-05:
 - Tool definitions with JSON Schema validation
 - Cursor-based pagination for list operations
 
+## Troubleshooting
+
+### Permission Denied Errors
+
+**"Permission denied" for Calendar/Reminders/Contacts:**
+1. Open System Settings → Privacy & Security
+2. Find the relevant section (Calendars, Reminders, or Contacts)
+3. Enable access for your terminal application or Claude Desktop
+
+**"Unable to access database" for Notes/Messages:**
+1. Open System Settings → Privacy & Security → Full Disk Access
+2. Add your terminal application or the `apple-bridge` executable
+3. Restart the application after granting access
+
+**"AppleScript error" for Mail/Maps:**
+1. Open System Settings → Privacy & Security → Automation
+2. Enable access to Mail.app and/or Maps.app for your terminal
+3. You may need to run a command once to trigger the permission prompt
+
+### Common Issues
+
+**Server doesn't respond:**
+- Ensure you're using the correct path to the `apple-bridge` executable
+- Check that the executable has execute permissions: `chmod +x apple-bridge`
+- Verify no other process is using stdin/stdout
+
+**Tool returns empty results:**
+- Verify the relevant macOS app has data (e.g., Calendar has events)
+- Check that permissions are granted in System Settings
+- For Notes/Messages, ensure Full Disk Access is enabled
+
+**Tests fail with permission errors:**
+- Unit tests don't require permissions and should always pass
+- System tests require `APPLE_BRIDGE_SYSTEM_TESTS=1` and proper permissions
+- See the "System Tests" section above for setup instructions
+
+### Debug Mode
+
+To see detailed logging, run with stderr visible:
+
+```bash
+# View logs while running
+./apple-bridge 2>apple-bridge.log &
+tail -f apple-bridge.log
+```
+
+Logs go to stderr only; stdout is reserved for MCP protocol messages.
+
+## CI Status
+
+[![CI](https://github.com/boutquin/apple-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/boutquin/apple-bridge/actions/workflows/ci.yml)
+
 ## License
 
 MIT License - see LICENSE file for details.

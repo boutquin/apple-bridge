@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- App Sandbox disabled for command-line tool -->
+    <key>com.apple.security.app-sandbox</key>
+    <false/>
+
+    <!-- Calendar access -->
+    <key>com.apple.security.personal-information.calendars</key>
+    <true/>
+
+    <!-- Contacts access -->
+    <key>com.apple.security.personal-information.addressbook</key>
+    <true/>
+
+    <!-- Apple Events (for Mail and Maps automation) -->
+    <key>com.apple.security.automation.apple-events</key>
+    <true/>
+
+    <!-- Note: Full Disk Access cannot be requested via entitlements -->
+    <!-- It must be granted manually in System Settings -->
+</dict>
+</plist>
