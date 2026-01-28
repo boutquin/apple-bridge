@@ -6,19 +6,34 @@ import Core
 ///
 /// These handlers wire the `CalendarService` protocol to MCP tool calls,
 /// handling argument parsing, response formatting, and error handling.
+///
+/// ## Tool Summary
+/// | Tool | Operation | Required Args |
+/// |------|-----------|---------------|
+/// | `calendar_list` | List events | none |
+/// | `calendar_search` | Search events | `query` |
+/// | `calendar_get` | Get event | `id` |
+/// | `calendar_create` | Create event | `title`, `startDate`, `endDate` |
+/// | `calendar_update` | Update event | `id` |
+/// | `calendar_delete` | Delete event | `id` |
 enum CalendarHandlers {
 
     // MARK: - Handler Implementations
 
     /// Handler for `calendar_list` - lists calendar events.
+    ///
+    /// - Parameters:
+    ///   - services: The Apple services container.
+    ///   - arguments: MCP arguments containing optional `limit`, `from`, `to`, `cursor`.
+    /// - Returns: Paginated JSON response with events.
     static func listEvents(
         services: any AppleServicesProtocol,
         arguments: [String: Value]?
     ) async -> CallTool.Result {
-        let limit = extractInt(from: arguments, key: "limit") ?? 10
-        let from = extractString(from: arguments, key: "from")
-        let to = extractString(from: arguments, key: "to")
-        let cursor = extractString(from: arguments, key: "cursor")
+        let limit = HandlerUtilities.extractInt(from: arguments, key: "limit") ?? 10
+        let from = HandlerUtilities.extractString(from: arguments, key: "from")
+        let to = HandlerUtilities.extractString(from: arguments, key: "to")
+        let cursor = HandlerUtilities.extractString(from: arguments, key: "cursor")
 
         do {
             let page = try await services.calendar.listEvents(
@@ -27,25 +42,30 @@ enum CalendarHandlers {
                 to: to,
                 cursor: cursor
             )
-            return successResult(page)
+            return HandlerUtilities.successResult(page)
         } catch {
-            return errorResult(error)
+            return HandlerUtilities.errorResult(error)
         }
     }
 
     /// Handler for `calendar_search` - searches calendar events.
+    ///
+    /// - Parameters:
+    ///   - services: The Apple services container.
+    ///   - arguments: MCP arguments containing `query` (required), `limit`, `from`, `to`, `cursor`.
+    /// - Returns: Paginated JSON response with matching events.
     static func searchEvents(
         services: any AppleServicesProtocol,
         arguments: [String: Value]?
     ) async -> CallTool.Result {
-        guard let query = extractString(from: arguments, key: "query") else {
-            return missingRequiredParameter("query")
+        guard let query = HandlerUtilities.extractString(from: arguments, key: "query") else {
+            return HandlerUtilities.missingRequiredParameter("query")
         }
 
-        let limit = extractInt(from: arguments, key: "limit") ?? 10
-        let from = extractString(from: arguments, key: "from")
-        let to = extractString(from: arguments, key: "to")
-        let cursor = extractString(from: arguments, key: "cursor")
+        let limit = HandlerUtilities.extractInt(from: arguments, key: "limit") ?? 10
+        let from = HandlerUtilities.extractString(from: arguments, key: "from")
+        let to = HandlerUtilities.extractString(from: arguments, key: "to")
+        let cursor = HandlerUtilities.extractString(from: arguments, key: "cursor")
 
         do {
             let page = try await services.calendar.searchEvents(
@@ -55,47 +75,57 @@ enum CalendarHandlers {
                 to: to,
                 cursor: cursor
             )
-            return successResult(page)
+            return HandlerUtilities.successResult(page)
         } catch {
-            return errorResult(error)
+            return HandlerUtilities.errorResult(error)
         }
     }
 
     /// Handler for `calendar_get` - gets a single event by ID.
+    ///
+    /// - Parameters:
+    ///   - services: The Apple services container.
+    ///   - arguments: MCP arguments containing `id` (required).
+    /// - Returns: JSON object with the event.
     static func getEvent(
         services: any AppleServicesProtocol,
         arguments: [String: Value]?
     ) async -> CallTool.Result {
-        guard let id = extractString(from: arguments, key: "id") else {
-            return missingRequiredParameter("id")
+        guard let id = HandlerUtilities.extractString(from: arguments, key: "id") else {
+            return HandlerUtilities.missingRequiredParameter("id")
         }
 
         do {
             let event = try await services.calendar.getEvent(id: id)
-            return successResult(event)
+            return HandlerUtilities.successResult(event)
         } catch {
-            return errorResult(error)
+            return HandlerUtilities.errorResult(error)
         }
     }
 
-    /// Handler for `calendar_create` - creates a new event.
+    /// Handler for `calendar_create` - creates a new calendar event.
+    ///
+    /// - Parameters:
+    ///   - services: The Apple services container.
+    ///   - arguments: MCP arguments containing `title`, `startDate`, `endDate` (required), plus optional `calendarId`, `location`, `notes`.
+    /// - Returns: JSON object with the created event's `id`.
     static func createEvent(
         services: any AppleServicesProtocol,
         arguments: [String: Value]?
     ) async -> CallTool.Result {
-        guard let title = extractString(from: arguments, key: "title") else {
-            return missingRequiredParameter("title")
+        guard let title = HandlerUtilities.extractString(from: arguments, key: "title") else {
+            return HandlerUtilities.missingRequiredParameter("title")
         }
-        guard let startDate = extractString(from: arguments, key: "startDate") else {
-            return missingRequiredParameter("startDate")
+        guard let startDate = HandlerUtilities.extractString(from: arguments, key: "startDate") else {
+            return HandlerUtilities.missingRequiredParameter("startDate")
         }
-        guard let endDate = extractString(from: arguments, key: "endDate") else {
-            return missingRequiredParameter("endDate")
+        guard let endDate = HandlerUtilities.extractString(from: arguments, key: "endDate") else {
+            return HandlerUtilities.missingRequiredParameter("endDate")
         }
 
-        let calendarId = extractString(from: arguments, key: "calendarId")
-        let location = extractString(from: arguments, key: "location")
-        let notes = extractString(from: arguments, key: "notes")
+        let calendarId = HandlerUtilities.extractString(from: arguments, key: "calendarId")
+        let location = HandlerUtilities.extractString(from: arguments, key: "location")
+        let notes = HandlerUtilities.extractString(from: arguments, key: "notes")
 
         do {
             let id = try await services.calendar.createEvent(
@@ -111,42 +141,52 @@ enum CalendarHandlers {
                 isError: false
             )
         } catch {
-            return errorResult(error)
+            return HandlerUtilities.errorResult(error)
         }
     }
 
-    /// Handler for `calendar_update` - updates an existing event.
+    /// Handler for `calendar_update` - updates an existing calendar event.
+    ///
+    /// - Parameters:
+    ///   - services: The Apple services container.
+    ///   - arguments: MCP arguments containing `id` (required), plus optional `title`, `startDate`, `endDate`, `location`, `notes`.
+    /// - Returns: JSON object with the updated event.
     static func updateEvent(
         services: any AppleServicesProtocol,
         arguments: [String: Value]?
     ) async -> CallTool.Result {
-        guard let id = extractString(from: arguments, key: "id") else {
-            return missingRequiredParameter("id")
+        guard let id = HandlerUtilities.extractString(from: arguments, key: "id") else {
+            return HandlerUtilities.missingRequiredParameter("id")
         }
 
         let patch = CalendarEventPatch(
-            title: extractString(from: arguments, key: "title"),
-            startDate: extractString(from: arguments, key: "startDate"),
-            endDate: extractString(from: arguments, key: "endDate"),
-            location: extractString(from: arguments, key: "location"),
-            notes: extractString(from: arguments, key: "notes")
+            title: HandlerUtilities.extractString(from: arguments, key: "title"),
+            startDate: HandlerUtilities.extractString(from: arguments, key: "startDate"),
+            endDate: HandlerUtilities.extractString(from: arguments, key: "endDate"),
+            location: HandlerUtilities.extractString(from: arguments, key: "location"),
+            notes: HandlerUtilities.extractString(from: arguments, key: "notes")
         )
 
         do {
             let event = try await services.calendar.updateEvent(id: id, patch: patch)
-            return successResult(event)
+            return HandlerUtilities.successResult(event)
         } catch {
-            return errorResult(error)
+            return HandlerUtilities.errorResult(error)
         }
     }
 
-    /// Handler for `calendar_delete` - deletes an event.
+    /// Handler for `calendar_delete` - deletes a calendar event.
+    ///
+    /// - Parameters:
+    ///   - services: The Apple services container.
+    ///   - arguments: MCP arguments containing `id` (required).
+    /// - Returns: JSON object `{"deleted": true}` on success.
     static func deleteEvent(
         services: any AppleServicesProtocol,
         arguments: [String: Value]?
     ) async -> CallTool.Result {
-        guard let id = extractString(from: arguments, key: "id") else {
-            return missingRequiredParameter("id")
+        guard let id = HandlerUtilities.extractString(from: arguments, key: "id") else {
+            return HandlerUtilities.missingRequiredParameter("id")
         }
 
         do {
@@ -156,74 +196,7 @@ enum CalendarHandlers {
                 isError: false
             )
         } catch {
-            return errorResult(error)
+            return HandlerUtilities.errorResult(error)
         }
-    }
-
-    // MARK: - Private Helpers
-
-    /// Extracts a string value from arguments.
-    private static func extractString(from arguments: [String: Value]?, key: String) -> String? {
-        guard let arguments, let value = arguments[key] else { return nil }
-        switch value {
-        case .string(let str):
-            return str
-        default:
-            return nil
-        }
-    }
-
-    /// Extracts an integer value from arguments.
-    private static func extractInt(from arguments: [String: Value]?, key: String) -> Int? {
-        guard let arguments, let value = arguments[key] else { return nil }
-        switch value {
-        case .int(let num):
-            return num
-        case .double(let num):
-            return Int(num)
-        default:
-            return nil
-        }
-    }
-
-    /// Creates a success result from an Encodable value.
-    private static func successResult<T: Encodable>(_ value: T) -> CallTool.Result {
-        do {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let data = try encoder.encode(value)
-            let json = String(data: data, encoding: .utf8) ?? "{}"
-            return CallTool.Result(content: [.text(json)], isError: false)
-        } catch {
-            return CallTool.Result(
-                content: [.text("Error encoding result: \(error.localizedDescription)")],
-                isError: true
-            )
-        }
-    }
-
-    /// Creates an error result from an Error.
-    private static func errorResult(_ error: Error) -> CallTool.Result {
-        let message: String
-        switch error {
-        case let validationError as ValidationError:
-            message = validationError.userMessage
-        case let permissionError as PermissionError:
-            message = permissionError.userMessage
-        default:
-            message = error.localizedDescription
-        }
-        return CallTool.Result(
-            content: [.text("Error: \(message)")],
-            isError: true
-        )
-    }
-
-    /// Creates an error result for missing required parameter.
-    private static func missingRequiredParameter(_ name: String) -> CallTool.Result {
-        CallTool.Result(
-            content: [.text("Missing required parameter: \(name)")],
-            isError: true
-        )
     }
 }

@@ -26,11 +26,22 @@ public struct EventKitRemindersService: RemindersService, Sendable {
 
     // MARK: - RemindersService Protocol
 
+    /// Retrieves all reminder lists.
+    /// - Returns: Array of `ReminderList` objects.
+    /// - Throws: `PermissionError.remindersDenied` if reminders access is not granted.
     public func getLists() async throws -> [ReminderList] {
         let ekLists = try await adapter.fetchReminderLists()
         return ekLists.map { ReminderList(id: $0.id, name: $0.name) }
     }
 
+    /// Lists reminders in a specific list with pagination.
+    /// - Parameters:
+    ///   - listId: Identifier of the reminder list to query.
+    ///   - limit: Maximum number of reminders to return per page.
+    ///   - includeCompleted: Whether to include completed reminders.
+    ///   - cursor: Pagination cursor from a previous response (nil for first page).
+    /// - Returns: A paginated `Page<Reminder>` with items and optional `nextCursor`.
+    /// - Throws: `PermissionError.remindersDenied` if reminders access is not granted.
     public func list(listId: String, limit: Int, includeCompleted: Bool, cursor: String?) async throws -> Page<Reminder> {
         let allReminders = try await adapter.fetchReminders(listId: listId, includeCompleted: includeCompleted)
 
@@ -46,6 +57,17 @@ public struct EventKitRemindersService: RemindersService, Sendable {
         return Page(items: items, nextCursor: nextCursor, hasMore: hasMore)
     }
 
+    /// Searches reminders across all lists by query string.
+    ///
+    /// Performs case-insensitive search in reminder titles and notes.
+    ///
+    /// - Parameters:
+    ///   - query: Search query string.
+    ///   - limit: Maximum number of reminders to return per page.
+    ///   - includeCompleted: Whether to include completed reminders in results.
+    ///   - cursor: Pagination cursor from a previous response (nil for first page).
+    /// - Returns: A paginated `Page<Reminder>` with matching items.
+    /// - Throws: `PermissionError.remindersDenied` if reminders access is not granted.
     public func search(query: String, limit: Int, includeCompleted: Bool, cursor: String?) async throws -> Page<Reminder> {
         // Fetch all reminders from all lists
         let allReminders = try await adapter.fetchReminders(listId: nil, includeCompleted: includeCompleted)
@@ -68,6 +90,15 @@ public struct EventKitRemindersService: RemindersService, Sendable {
         return Page(items: items, nextCursor: nextCursor, hasMore: hasMore)
     }
 
+    /// Creates a new reminder.
+    /// - Parameters:
+    ///   - title: Title of the reminder (required).
+    ///   - dueDate: Due date in ISO 8601 format (optional).
+    ///   - notes: Additional notes (optional).
+    ///   - listId: Target list identifier (nil uses default list).
+    ///   - priority: Priority level 1-9 where 1 is highest (optional).
+    /// - Returns: The identifier of the created reminder.
+    /// - Throws: `PermissionError.remindersDenied` if reminders access is not granted.
     public func create(title: String, dueDate: String?, notes: String?, listId: String?, priority: Int?) async throws -> String {
         let dueDateParsed: Date? = dueDate.flatMap { parseDate($0) }
 
@@ -80,6 +111,15 @@ public struct EventKitRemindersService: RemindersService, Sendable {
         )
     }
 
+    /// Updates an existing reminder.
+    ///
+    /// Only fields present in the patch are updated; other fields remain unchanged.
+    ///
+    /// - Parameters:
+    ///   - id: Identifier of the reminder to update.
+    ///   - patch: Fields to update (nil values are ignored).
+    /// - Returns: The updated `Reminder`.
+    /// - Throws: `ValidationError.notFound` if the reminder doesn't exist.
     public func update(id: String, patch: ReminderPatch) async throws -> Reminder {
         let dueDateParsed: Date? = patch.dueDate.flatMap { parseDate($0) }
 
@@ -95,15 +135,25 @@ public struct EventKitRemindersService: RemindersService, Sendable {
         return convertToReminder(updated)
     }
 
+    /// Deletes a reminder.
+    /// - Parameter id: Identifier of the reminder to delete.
+    /// - Throws: `ValidationError.notFound` if the reminder doesn't exist.
     public func delete(id: String) async throws {
         try await adapter.deleteReminder(id: id)
     }
 
+    /// Marks a reminder as completed.
+    /// - Parameter id: Identifier of the reminder to complete.
+    /// - Returns: The updated `Reminder` with `isCompleted` set to `true`.
+    /// - Throws: `ValidationError.notFound` if the reminder doesn't exist.
     public func complete(id: String) async throws -> Reminder {
         let completed = try await adapter.completeReminder(id: id)
         return convertToReminder(completed)
     }
 
+    /// Opens a reminder in the Reminders app.
+    /// - Parameter id: Identifier of the reminder to open.
+    /// - Throws: `ValidationError.notFound` if the reminder doesn't exist.
     public func open(id: String) async throws {
         try await adapter.openReminder(id: id)
     }
