@@ -29,24 +29,34 @@ struct ToolRegistryTests {
         #expect(names.count == uniqueNames.count, "Found duplicate tool names")
     }
 
-    @Test("ToolRegistry stubs return NOT_IMPLEMENTED")
-    func testToolRegistryStubsReturnNotImplemented() async throws {
+    @Test("All tools have real implementations")
+    func testAllToolsHaveRealImplementations() async throws {
         let services = makeTestServices()
         let registry = ToolRegistry.create(services: services)
 
-        // Use a tool that's still a stub (maps_search) - calendar, reminders, contacts, notes, messages, and mail tools are now implemented
+        // All 37 tools are now implemented (Phase 12 complete)
+        // Verify maps_search returns an error for missing required parameter, not NOT_IMPLEMENTED
         let result = await registry.callTool(name: "maps_search", arguments: nil)
 
         #expect(result.isError == true)
 
-        // Check that at least one content item contains NOT_IMPLEMENTED
+        // Check that the error is for missing parameter, NOT for unimplemented tool
         let hasNotImplemented = result.content.contains { content in
             if case .text(let text) = content {
                 return text.contains("NOT_IMPLEMENTED")
             }
             return false
         }
-        #expect(hasNotImplemented, "Expected NOT_IMPLEMENTED in error response")
+        #expect(!hasNotImplemented, "All tools should now be implemented - maps_search should return missing parameter error")
+
+        // Verify it's the expected missing parameter error
+        let hasMissingParam = result.content.contains { content in
+            if case .text(let text) = content {
+                return text.contains("query") || text.contains("Missing")
+            }
+            return false
+        }
+        #expect(hasMissingParam, "maps_search should return missing 'query' parameter error")
     }
 
     @Test("All tools follow domain_operation naming convention")

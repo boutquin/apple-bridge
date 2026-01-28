@@ -69,8 +69,8 @@ public actor ToolRegistry {
         // Mail tools (4) - Phase 11: Real handlers wired
         registerMailTools(into: &tools, services: services)
 
-        // Maps tools (6)
-        registerMapsTools(into: &tools)
+        // Maps tools (6) - Phase 12: Real handlers wired
+        registerMapsTools(into: &tools, services: services)
 
         return ToolRegistry(services: services, tools: tools)
     }
@@ -660,8 +660,9 @@ public actor ToolRegistry {
 
     // MARK: - Maps Tools (6)
 
-    private static func registerMapsTools(into tools: inout [String: ToolEntry]) {
-        register(
+    /// Registers maps tools with real handlers (Phase 12).
+    private static func registerMapsTools(into tools: inout [String: ToolEntry], services: any AppleServicesProtocol) {
+        registerWithHandler(
             into: &tools,
             name: "maps_search",
             description: "Search for locations",
@@ -673,10 +674,11 @@ public actor ToolRegistry {
                     "limit": .object(["type": "integer", "description": "Maximum number of results to return"])
                 ]),
                 "required": .array([.string("query")])
-            ])
+            ]),
+            handler: { args in await MapsHandlers.searchLocations(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "maps_directions",
             description: "Get directions between two locations",
@@ -688,10 +690,11 @@ public actor ToolRegistry {
                     "mode": .object(["type": "string", "enum": .array([.string("driving"), .string("walking"), .string("transit")]), "description": "Travel mode"])
                 ]),
                 "required": .array([.string("from"), .string("to")])
-            ])
+            ]),
+            handler: { args in await MapsHandlers.getDirections(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "maps_open",
             description: "Open a location in the Maps app",
@@ -701,20 +704,22 @@ public actor ToolRegistry {
                     "query": .object(["type": "string", "description": "Location to open"])
                 ]),
                 "required": .array([.string("query")])
-            ])
+            ]),
+            handler: { args in await MapsHandlers.openLocation(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "maps_list_guides",
             description: "List saved guides",
             inputSchema: .object([
                 "type": "object",
                 "properties": .object([:])
-            ])
+            ]),
+            handler: { args in await MapsHandlers.listGuides(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "maps_open_guide",
             description: "Open a guide in the Maps app",
@@ -724,10 +729,11 @@ public actor ToolRegistry {
                     "name": .object(["type": "string", "description": "Guide name"])
                 ]),
                 "required": .array([.string("name")])
-            ])
+            ]),
+            handler: { args in await MapsHandlers.openGuide(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "maps_nearby",
             description: "Find nearby places by category",
@@ -739,7 +745,8 @@ public actor ToolRegistry {
                     "limit": .object(["type": "integer", "description": "Maximum number of results to return"])
                 ]),
                 "required": .array([.string("category")])
-            ])
+            ]),
+            handler: { args in await MapsHandlers.nearbyLocations(services: services, arguments: args) }
         )
     }
 }

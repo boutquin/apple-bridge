@@ -33,18 +33,29 @@ struct ToolDispatcherTests {
         let registry = ToolRegistry.create(services: services)
         let dispatcher = ToolDispatcher(registry: registry)
 
-        // Use a tool that's still a stub (maps_search) - calendar, reminders, contacts, notes, messages, and mail tools are now implemented
+        // All tools are now implemented (Phase 12 complete)
+        // Test that maps_search returns proper error for missing required parameter
         let result = await dispatcher.dispatch(name: "maps_search", arguments: nil)
 
         #expect(result.isError == true)
 
+        // Verify it's NOT a NOT_IMPLEMENTED error (tool is now implemented)
         let hasNotImplemented = result.content.contains { content in
             if case .text(let text) = content {
                 return text.contains("NOT_IMPLEMENTED")
             }
             return false
         }
-        #expect(hasNotImplemented, "Expected NOT_IMPLEMENTED for stub tool")
+        #expect(!hasNotImplemented, "maps_search should be implemented now, not return NOT_IMPLEMENTED")
+
+        // Verify it returns the expected missing parameter error
+        let hasMissingParam = result.content.contains { content in
+            if case .text(let text) = content {
+                return text.contains("query") || text.contains("Missing")
+            }
+            return false
+        }
+        #expect(hasMissingParam, "maps_search should return missing 'query' parameter error")
     }
 
     // MARK: - Timeout Tests
