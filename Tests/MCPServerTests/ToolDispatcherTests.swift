@@ -33,8 +33,8 @@ struct ToolDispatcherTests {
         let registry = ToolRegistry.create(services: services)
         let dispatcher = ToolDispatcher(registry: registry)
 
-        // Use a tool that's still a stub (messages_send) - calendar, reminders, contacts, and notes tools are now implemented
-        let result = await dispatcher.dispatch(name: "messages_send", arguments: nil)
+        // Use a tool that's still a stub (mail_send) - calendar, reminders, contacts, notes, and messages tools are now implemented
+        let result = await dispatcher.dispatch(name: "mail_send", arguments: nil)
 
         #expect(result.isError == true)
 

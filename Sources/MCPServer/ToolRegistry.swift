@@ -63,8 +63,8 @@ public actor ToolRegistry {
         // Notes tools (4) - Phase 9: Real handlers wired
         registerNotesTools(into: &tools, services: services)
 
-        // Messages tools (5)
-        registerMessagesTools(into: &tools)
+        // Messages tools (5) - Phase 10: Real handlers wired
+        registerMessagesTools(into: &tools, services: services)
 
         // Mail tools (4)
         registerMailTools(into: &tools)
@@ -513,8 +513,9 @@ public actor ToolRegistry {
 
     // MARK: - Messages Tools (5)
 
-    private static func registerMessagesTools(into tools: inout [String: ToolEntry]) {
-        register(
+    /// Registers messages tools with real handlers (Phase 10).
+    private static func registerMessagesTools(into tools: inout [String: ToolEntry], services: any AppleServicesProtocol) {
+        registerWithHandler(
             into: &tools,
             name: "messages_list_chats",
             description: "List message chats",
@@ -523,10 +524,11 @@ public actor ToolRegistry {
                 "properties": .object([
                     "limit": .object(["type": "integer", "description": "Maximum number of chats to return"])
                 ])
-            ])
+            ]),
+            handler: { args in await MessagesHandlers.listChats(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "messages_read",
             description: "Read messages from a chat",
@@ -538,10 +540,11 @@ public actor ToolRegistry {
                     "cursor": .object(["type": "string", "description": "Pagination cursor"])
                 ]),
                 "required": .array([.string("chatId")])
-            ])
+            ]),
+            handler: { args in await MessagesHandlers.readMessages(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "messages_unread",
             description: "Get unread messages",
@@ -550,10 +553,11 @@ public actor ToolRegistry {
                 "properties": .object([
                     "limit": .object(["type": "integer", "description": "Maximum number of messages to return"])
                 ])
-            ])
+            ]),
+            handler: { args in await MessagesHandlers.unreadMessages(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "messages_send",
             description: "Send a message",
@@ -564,10 +568,11 @@ public actor ToolRegistry {
                     "body": .object(["type": "string", "description": "Message body"])
                 ]),
                 "required": .array([.string("to"), .string("body")])
-            ])
+            ]),
+            handler: { args in await MessagesHandlers.sendMessage(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "messages_schedule",
             description: "Schedule a message to be sent later",
@@ -579,7 +584,8 @@ public actor ToolRegistry {
                     "scheduledAt": .object(["type": "string", "description": "Send time in ISO 8601 format"])
                 ]),
                 "required": .array([.string("to"), .string("body"), .string("scheduledAt")])
-            ])
+            ]),
+            handler: { args in await MessagesHandlers.scheduleMessage(services: services, arguments: args) }
         )
     }
 
