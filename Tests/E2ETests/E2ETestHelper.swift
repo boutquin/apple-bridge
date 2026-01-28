@@ -1,166 +1,57 @@
 import Foundation
+import TestUtilities
 
 /// Shared test helper for E2E tests.
 ///
 /// Provides utilities for running the apple-bridge executable and capturing output.
-/// All methods are static since this is a stateless utility namespace.
+/// This is a thin wrapper around `ProcessRunner` from TestUtilities, maintaining
+/// the original API for backward compatibility.
+///
+/// ## Migration Note
+/// This helper now delegates to `ProcessRunner` from the shared TestUtilities module.
+/// New tests should use `ProcessRunner` directly for better discoverability.
 enum E2ETestHelper {
-
-    // MARK: - Constants
-
-    /// Default timeout for process execution in seconds.
-    private static let defaultTimeout: TimeInterval = 5.0
-
-    /// Poll interval when waiting for process completion.
-    private static let pollInterval: Duration = .milliseconds(50)
 
     /// Standard initialize message for MCP protocol handshake.
     ///
     /// Use this constant to avoid duplicating the JSON-RPC initialize message
     /// across multiple tests.
-    static let initializeMessage = """
-    {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}
-    """
-
-    // MARK: - Public Methods
+    static let initializeMessage = ProcessRunner.initializeMessage
 
     /// Runs the apple-bridge executable with the given input and returns stdout/stderr.
     ///
-    /// This method starts the apple-bridge process, sends the provided JSON-RPC messages
-    /// via stdin, waits for the process to complete (with timeout), and captures all output.
+    /// This method delegates to `ProcessRunner.runAppleBridge(input:)`.
     ///
     /// - Parameter input: The JSON-RPC messages to send to stdin (newline-delimited)
     /// - Returns: A tuple of (stdout, stderr) output strings
     /// - Throws: `E2EError.executableNotFound` if the executable cannot be located,
     ///           `E2EError.timeout` if the process doesn't complete within the timeout
     static func runAppleBridge(input: String) async throws -> (stdout: String, stderr: String) {
-        let executableURL = try findExecutable()
-
-        let process = Process()
-        process.executableURL = executableURL
-
-        let stdinPipe = Pipe()
-        let stdoutPipe = Pipe()
-        let stderrPipe = Pipe()
-
-        process.standardInput = stdinPipe
-        process.standardOutput = stdoutPipe
-        process.standardError = stderrPipe
-
-        try process.run()
-
-        // Write input to stdin, adding newlines between messages
-        let inputWithNewlines = input
-            .split(separator: "\n", omittingEmptySubsequences: true)
-            .joined(separator: "\n") + "\n"
-
-        if let inputData = inputWithNewlines.data(using: .utf8) {
-            try stdinPipe.fileHandleForWriting.write(contentsOf: inputData)
-        }
-
-        // Close stdin to signal EOF
-        try stdinPipe.fileHandleForWriting.close()
-
-        // Wait for output with timeout
-        let startTime = Date()
-
-        while process.isRunning {
-            if Date().timeIntervalSince(startTime) > defaultTimeout {
-                process.terminate()
+        do {
+            return try await ProcessRunner.runAppleBridge(input: input)
+        } catch let error as ProcessRunnerError {
+            // Map ProcessRunnerError to E2EError for backward compatibility
+            switch error {
+            case .executableNotFound:
+                throw E2EError.executableNotFound
+            case .timeout:
                 throw E2EError.timeout
             }
-            try await Task.sleep(for: pollInterval)
         }
-
-        // Read all output
-        let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-        let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-
-        let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
-        let stderr = String(data: stderrData, encoding: .utf8) ?? ""
-
-        return (stdout, stderr)
     }
 
     /// Finds the apple-bridge executable in the build directory.
     ///
-    /// Searches for the executable in the following order:
-    /// 1. `BUILT_PRODUCTS_DIR` environment variable (Xcode builds)
-    /// 2. `BUILD_DIR` environment variable (Swift Package Manager)
-    /// 3. Common relative paths from the current directory
-    /// 4. System PATH via `/usr/bin/which`
+    /// This method delegates to `ProcessRunner.findExecutable()`.
     ///
     /// - Returns: The URL to the executable
     /// - Throws: `E2EError.executableNotFound` if the executable cannot be located
     static func findExecutable() throws -> URL {
-        let possiblePaths = [
-            ".build/debug/apple-bridge",
-            ".build/release/apple-bridge",
-            "../../../.build/debug/apple-bridge",
-            "../../../.build/release/apple-bridge"
-        ]
-
-        // Try BUILT_PRODUCTS_DIR (Xcode)
-        if let builtProductsDir = ProcessInfo.processInfo.environment["BUILT_PRODUCTS_DIR"] {
-            let path = URL(fileURLWithPath: builtProductsDir).appendingPathComponent("apple-bridge")
-            if FileManager.default.fileExists(atPath: path.path) {
-                return path
-            }
-        }
-
-        // Try BUILD_DIR (Swift Package Manager)
-        if let buildDir = ProcessInfo.processInfo.environment["BUILD_DIR"] {
-            let path = URL(fileURLWithPath: buildDir).appendingPathComponent("apple-bridge")
-            if FileManager.default.fileExists(atPath: path.path) {
-                return path
-            }
-        }
-
-        // Try relative paths
-        let currentDir = FileManager.default.currentDirectoryPath
-        for relativePath in possiblePaths {
-            let fullPath = URL(fileURLWithPath: currentDir).appendingPathComponent(relativePath)
-            if FileManager.default.fileExists(atPath: fullPath.path) {
-                return fullPath
-            }
-        }
-
-        // Try `which` as fallback (errors are expected and ignored here)
-        if let pathFromWhich = try? findExecutableViaWhich() {
-            return pathFromWhich
-        }
-
-        throw E2EError.executableNotFound
-    }
-
-    // MARK: - Private Methods
-
-    /// Attempts to find the executable using the system `which` command.
-    ///
-    /// - Returns: The URL to the executable if found in PATH
-    /// - Throws: If the executable is not found in PATH
-    private static func findExecutableViaWhich() throws -> URL {
-        let whichProcess = Process()
-        whichProcess.executableURL = URL(fileURLWithPath: "/usr/bin/which")
-        whichProcess.arguments = ["apple-bridge"]
-
-        let pipe = Pipe()
-        whichProcess.standardOutput = pipe
-
-        try whichProcess.run()
-        whichProcess.waitUntilExit()
-
-        guard whichProcess.terminationStatus == 0 else {
+        do {
+            return try ProcessRunner.findExecutable()
+        } catch {
             throw E2EError.executableNotFound
         }
-
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        guard let path = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !path.isEmpty else {
-            throw E2EError.executableNotFound
-        }
-
-        return URL(fileURLWithPath: path)
     }
 }
 

@@ -40,7 +40,7 @@ let package = Package(
             ]
         ),
         .testTarget(name: "MCPServerTests", dependencies: ["MCPServer", "TestUtilities"]),
-        .testTarget(name: "E2ETests", dependencies: ["apple-bridge"]),
-        .testTarget(name: "SystemTests", dependencies: ["Core", "Adapters"])
+        .testTarget(name: "E2ETests", dependencies: ["apple-bridge", "TestUtilities"]),
+        .testTarget(name: "SystemTests", dependencies: ["Core", "Adapters", "TestUtilities"])
     ]
 )
