@@ -1,7 +1,7 @@
 import Foundation
 import Core
 
-// MARK: - Data Transfer Objects
+// MARK: - Calendar Data Transfer Objects
 
 /// Lightweight data representation of an EventKit event.
 ///
@@ -69,6 +69,73 @@ public struct EKCalendarData: Sendable, Equatable {
         self.id = id
         self.title = title
         self.isWritable = isWritable
+    }
+}
+
+// MARK: - Reminders Data Transfer Objects
+
+/// Lightweight data representation of an EventKit reminder.
+///
+/// This struct provides a Sendable, Codable representation of reminders
+/// that can be safely passed across actor boundaries without requiring direct
+/// EventKit framework access.
+public struct EKReminderData: Sendable, Equatable {
+    /// Unique identifier for the reminder.
+    public let id: String
+
+    /// Title of the reminder.
+    public let title: String
+
+    /// Identifier of the list containing this reminder.
+    public let listId: String
+
+    /// Whether the reminder has been completed.
+    public let isCompleted: Bool
+
+    /// Due date/time of the reminder, if set.
+    public let dueDate: Date?
+
+    /// Additional notes for the reminder.
+    public let notes: String?
+
+    /// Priority level (1 = high, 5 = medium, 9 = low), or `nil` for none.
+    public let priority: Int?
+
+    /// Creates a new reminder data instance.
+    public init(
+        id: String,
+        title: String,
+        listId: String,
+        isCompleted: Bool,
+        dueDate: Date? = nil,
+        notes: String? = nil,
+        priority: Int? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.listId = listId
+        self.isCompleted = isCompleted
+        self.dueDate = dueDate
+        self.notes = notes
+        self.priority = priority
+    }
+}
+
+/// Lightweight data representation of an EventKit reminder list.
+///
+/// This struct provides a Sendable representation of reminder lists that can be
+/// safely passed across actor boundaries.
+public struct EKReminderListData: Sendable, Equatable {
+    /// Unique identifier for the list.
+    public let id: String
+
+    /// Display name of the list.
+    public let name: String
+
+    /// Creates a new reminder list data instance.
+    public init(id: String, name: String) {
+        self.id = id
+        self.name = name
     }
 }
 
@@ -177,4 +244,91 @@ public protocol EventKitAdapterProtocol: Sendable {
     /// - Parameter id: Event identifier.
     /// - Throws: `ValidationError.notFound` if the event doesn't exist.
     func openEvent(id: String) async throws
+
+    // MARK: - Reminders Authorization
+
+    /// Requests reminders access from the user.
+    /// - Returns: `true` if access is granted, `false` if denied.
+    /// - Throws: `PermissionError` if there's an issue requesting access.
+    func requestRemindersAccess() async throws -> Bool
+
+    // MARK: - Reminder List Operations
+
+    /// Fetches all reminder lists.
+    /// - Returns: Array of reminder list data objects.
+    /// - Throws: `PermissionError.remindersDenied` if reminders access is not granted.
+    func fetchReminderLists() async throws -> [EKReminderListData]
+
+    /// Returns the identifier of the default reminder list.
+    /// - Returns: The default list identifier.
+    /// - Throws: `PermissionError.remindersDenied` if reminders access is not granted.
+    func defaultReminderListId() async throws -> String
+
+    // MARK: - Reminder Operations
+
+    /// Fetches reminders from a specific list.
+    /// - Parameters:
+    ///   - listId: The list identifier (nil = all lists).
+    ///   - includeCompleted: Whether to include completed reminders.
+    /// - Returns: Array of reminders.
+    /// - Throws: `PermissionError.remindersDenied` if reminders access is not granted.
+    func fetchReminders(listId: String?, includeCompleted: Bool) async throws -> [EKReminderData]
+
+    /// Fetches a single reminder by identifier.
+    /// - Parameter id: The reminder identifier.
+    /// - Returns: The reminder data.
+    /// - Throws: `ValidationError.notFound` if the reminder doesn't exist.
+    func fetchReminder(id: String) async throws -> EKReminderData
+
+    /// Creates a new reminder.
+    /// - Parameters:
+    ///   - title: Reminder title.
+    ///   - dueDate: Due date/time (optional).
+    ///   - notes: Reminder notes (optional).
+    ///   - listId: Target list (nil = default list).
+    ///   - priority: Priority 1-9 (optional).
+    /// - Returns: The identifier of the created reminder.
+    /// - Throws: `PermissionError.remindersDenied` if reminders access is not granted.
+    func createReminder(
+        title: String,
+        dueDate: Date?,
+        notes: String?,
+        listId: String?,
+        priority: Int?
+    ) async throws -> String
+
+    /// Updates an existing reminder.
+    /// - Parameters:
+    ///   - id: Reminder identifier.
+    ///   - title: New title (nil = no change).
+    ///   - dueDate: New due date (nil = no change).
+    ///   - notes: New notes (nil = no change).
+    ///   - listId: New list ID (nil = no change).
+    ///   - priority: New priority (nil = no change).
+    /// - Returns: The updated reminder data.
+    /// - Throws: `ValidationError.notFound` if the reminder doesn't exist.
+    func updateReminder(
+        id: String,
+        title: String?,
+        dueDate: Date?,
+        notes: String?,
+        listId: String?,
+        priority: Int?
+    ) async throws -> EKReminderData
+
+    /// Deletes a reminder.
+    /// - Parameter id: Reminder identifier.
+    /// - Throws: `ValidationError.notFound` if the reminder doesn't exist.
+    func deleteReminder(id: String) async throws
+
+    /// Marks a reminder as completed.
+    /// - Parameter id: Reminder identifier.
+    /// - Returns: The completed reminder data.
+    /// - Throws: `ValidationError.notFound` if the reminder doesn't exist.
+    func completeReminder(id: String) async throws -> EKReminderData
+
+    /// Opens a reminder in the Reminders app.
+    /// - Parameter id: Reminder identifier.
+    /// - Throws: `ValidationError.notFound` if the reminder doesn't exist.
+    func openReminder(id: String) async throws
 }

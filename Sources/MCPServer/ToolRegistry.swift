@@ -54,8 +54,8 @@ public actor ToolRegistry {
         // Calendar tools (6) - Phase 5: Real handlers wired
         registerCalendarTools(into: &tools, services: services)
 
-        // Reminders tools (8)
-        registerRemindersTools(into: &tools)
+        // Reminders tools (8) - Phase 6: Real handlers wired
+        registerRemindersTools(into: &tools, services: services)
 
         // Contacts tools (4)
         registerContactsTools(into: &tools)
@@ -260,18 +260,20 @@ public actor ToolRegistry {
 
     // MARK: - Reminders Tools (8)
 
-    private static func registerRemindersTools(into tools: inout [String: ToolEntry]) {
-        register(
+    /// Registers reminders tools with real handlers (Phase 6).
+    private static func registerRemindersTools(into tools: inout [String: ToolEntry], services: any AppleServicesProtocol) {
+        registerWithHandler(
             into: &tools,
             name: "reminders_get_lists",
             description: "Get all reminder lists",
             inputSchema: .object([
                 "type": "object",
                 "properties": .object([:])
-            ])
+            ]),
+            handler: { args in await RemindersHandlers.getLists(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "reminders_list",
             description: "List reminders in a list",
@@ -282,11 +284,13 @@ public actor ToolRegistry {
                     "limit": .object(["type": "integer", "description": "Maximum number of reminders to return"]),
                     "includeCompleted": .object(["type": "boolean", "description": "Whether to include completed reminders"]),
                     "cursor": .object(["type": "string", "description": "Pagination cursor"])
-                ])
-            ])
+                ]),
+                "required": .array([.string("listId")])
+            ]),
+            handler: { args in await RemindersHandlers.listReminders(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "reminders_search",
             description: "Search reminders by query",
@@ -299,10 +303,11 @@ public actor ToolRegistry {
                     "cursor": .object(["type": "string", "description": "Pagination cursor"])
                 ]),
                 "required": .array([.string("query")])
-            ])
+            ]),
+            handler: { args in await RemindersHandlers.searchReminders(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "reminders_create",
             description: "Create a new reminder",
@@ -316,10 +321,11 @@ public actor ToolRegistry {
                     "priority": .object(["type": "integer", "description": "Priority (1-9)"])
                 ]),
                 "required": .array([.string("title")])
-            ])
+            ]),
+            handler: { args in await RemindersHandlers.createReminder(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "reminders_update",
             description: "Update an existing reminder",
@@ -334,10 +340,11 @@ public actor ToolRegistry {
                     "priority": .object(["type": "integer", "description": "New priority (1-9)"])
                 ]),
                 "required": .array([.string("id")])
-            ])
+            ]),
+            handler: { args in await RemindersHandlers.updateReminder(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "reminders_delete",
             description: "Delete a reminder",
@@ -347,10 +354,11 @@ public actor ToolRegistry {
                     "id": .object(["type": "string", "description": "Reminder ID"])
                 ]),
                 "required": .array([.string("id")])
-            ])
+            ]),
+            handler: { args in await RemindersHandlers.deleteReminder(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "reminders_complete",
             description: "Mark a reminder as complete",
@@ -360,10 +368,11 @@ public actor ToolRegistry {
                     "id": .object(["type": "string", "description": "Reminder ID"])
                 ]),
                 "required": .array([.string("id")])
-            ])
+            ]),
+            handler: { args in await RemindersHandlers.completeReminder(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "reminders_open",
             description: "Open a reminder in the Reminders app",
@@ -373,7 +382,8 @@ public actor ToolRegistry {
                     "id": .object(["type": "string", "description": "Reminder ID"])
                 ]),
                 "required": .array([.string("id")])
-            ])
+            ]),
+            handler: { args in await RemindersHandlers.openReminder(services: services, arguments: args) }
         )
     }
 
