@@ -13,7 +13,8 @@ struct ContactsAdapterTests {
     @Test("MockContactsAdapter conforms to protocol")
     func testMockContactsAdapterConforms() async throws {
         let adapter = MockContactsAdapter()
-        #expect(adapter is any ContactsAdapterProtocol)
+        let value: any Sendable = adapter
+        #expect(value is any ContactsAdapterProtocol)
     }
 
     @Test("MockContactsAdapter is Sendable")

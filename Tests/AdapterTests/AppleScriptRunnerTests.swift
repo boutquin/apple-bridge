@@ -17,8 +17,8 @@ struct AppleScriptRunnerTests {
 
     @Test("AppleScriptRunner is an actor")
     func testRunnerIsActor() {
-        // Verify it's an actor (compile-time check via nonisolated property access)
-        let runner = AppleScriptRunner.shared
+        // Compile-time check: accessing .shared proves actor type
+        let runner: any Sendable = AppleScriptRunner.shared
         #expect(runner is AppleScriptRunner)
     }
 
@@ -90,9 +90,8 @@ struct AppleScriptRunnerTests {
                 end tell
                 """)
             // Note: This might not throw on some systems, depending on app availability
-        } catch let error as AppleScriptError {
+        } catch _ as AppleScriptError {
             // Expected
-            #expect(true)
         } catch {
             // Other errors are also acceptable
         }
@@ -196,11 +195,11 @@ struct AppleScriptRunnerTests {
                 #expect(seconds == 0, "Timeout should report the configured seconds")
             } else {
                 // executionFailed is also acceptable if process was terminated
-                #expect(true)
+                #expect(Bool(true))
             }
         } catch {
             // CancellationError or other errors are acceptable
-            #expect(true)
+            #expect(Bool(true))
         }
     }
 }
