@@ -57,8 +57,8 @@ public actor ToolRegistry {
         // Reminders tools (8) - Phase 6: Real handlers wired
         registerRemindersTools(into: &tools, services: services)
 
-        // Contacts tools (4)
-        registerContactsTools(into: &tools)
+        // Contacts tools (4) - Phase 7: Real handlers wired
+        registerContactsTools(into: &tools, services: services)
 
         // Notes tools (4)
         registerNotesTools(into: &tools)
@@ -389,8 +389,9 @@ public actor ToolRegistry {
 
     // MARK: - Contacts Tools (4)
 
-    private static func registerContactsTools(into tools: inout [String: ToolEntry]) {
-        register(
+    /// Registers contacts tools with real handlers (Phase 7).
+    private static func registerContactsTools(into tools: inout [String: ToolEntry], services: any AppleServicesProtocol) {
+        registerWithHandler(
             into: &tools,
             name: "contacts_search",
             description: "Search contacts by query",
@@ -401,10 +402,11 @@ public actor ToolRegistry {
                     "limit": .object(["type": "integer", "description": "Maximum number of contacts to return"])
                 ]),
                 "required": .array([.string("query")])
-            ])
+            ]),
+            handler: { args in await ContactsHandlers.searchContacts(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "contacts_get",
             description: "Get a contact by ID",
@@ -414,20 +416,22 @@ public actor ToolRegistry {
                     "id": .object(["type": "string", "description": "Contact ID"])
                 ]),
                 "required": .array([.string("id")])
-            ])
+            ]),
+            handler: { args in await ContactsHandlers.getContact(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "contacts_me",
             description: "Get the current user's contact card",
             inputSchema: .object([
                 "type": "object",
                 "properties": .object([:])
-            ])
+            ]),
+            handler: { args in await ContactsHandlers.getMe(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "contacts_open",
             description: "Open a contact in the Contacts app",
@@ -437,7 +441,8 @@ public actor ToolRegistry {
                     "id": .object(["type": "string", "description": "Contact ID"])
                 ]),
                 "required": .array([.string("id")])
-            ])
+            ]),
+            handler: { args in await ContactsHandlers.openContact(services: services, arguments: args) }
         )
     }
 
