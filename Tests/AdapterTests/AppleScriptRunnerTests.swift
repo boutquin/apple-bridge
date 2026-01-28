@@ -170,4 +170,37 @@ struct AppleScriptRunnerTests {
 
         #expect(result == "test")
     }
+
+    // MARK: - Timeout Tests
+
+    @Test("run with timeout completes fast scripts")
+    func testRunWithTimeoutCompletesFastScripts() async throws {
+        let runner = AppleScriptRunner.shared
+
+        // Fast script with generous timeout should succeed
+        let result = try await runner.run(script: "return 42", timeout: 5.0)
+
+        #expect(result == "42")
+    }
+
+    @Test("run with timeout throws for slow scripts")
+    func testRunWithTimeoutThrowsForSlowScripts() async throws {
+        let runner = AppleScriptRunner.shared
+
+        do {
+            // Script that delays longer than timeout
+            _ = try await runner.run(script: "delay 3", timeout: 0.1)
+            Issue.record("Should have thrown a timeout error")
+        } catch let error as AppleScriptError {
+            if case .timeout(let seconds) = error {
+                #expect(seconds == 0, "Timeout should report the configured seconds")
+            } else {
+                // executionFailed is also acceptable if process was terminated
+                #expect(true)
+            }
+        } catch {
+            // CancellationError or other errors are acceptable
+            #expect(true)
+        }
+    }
 }

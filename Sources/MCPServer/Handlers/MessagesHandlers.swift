@@ -20,6 +20,10 @@ enum MessagesHandlers {
     ///   - services: The services container.
     ///   - arguments: Optional limit parameter.
     /// - Returns: JSON array of chats with id and displayName.
+    ///
+    /// Service errors are caught and returned as `CallTool.Result` with `isError: true`:
+    /// - `PermissionError.fullDiskAccessDenied`: Full Disk Access not granted.
+    /// - `SQLiteError`: Database access or query errors.
     static func listChats(
         services: any AppleServicesProtocol,
         arguments: [String: Value]?
@@ -48,6 +52,10 @@ enum MessagesHandlers {
     ///   - services: The services container.
     ///   - arguments: chatId (required), limit (optional).
     /// - Returns: Paginated response with messages.
+    ///
+    /// Service errors are caught and returned as `CallTool.Result` with `isError: true`:
+    /// - `PermissionError.fullDiskAccessDenied`: Full Disk Access not granted.
+    /// - `SQLiteError`: Database access or query errors.
     static func readMessages(
         services: any AppleServicesProtocol,
         arguments: [String: Value]?
@@ -74,6 +82,10 @@ enum MessagesHandlers {
     ///   - services: The services container.
     ///   - arguments: Optional limit parameter.
     /// - Returns: Array of unread messages.
+    ///
+    /// Service errors are caught and returned as `CallTool.Result` with `isError: true`:
+    /// - `PermissionError.fullDiskAccessDenied`: Full Disk Access not granted.
+    /// - `SQLiteError`: Database access or query errors.
     static func unreadMessages(
         services: any AppleServicesProtocol,
         arguments: [String: Value]?
@@ -96,6 +108,10 @@ enum MessagesHandlers {
     ///   - services: The services container.
     ///   - arguments: to (required), body (required).
     /// - Returns: Success confirmation with recipient.
+    ///
+    /// Service errors are caught and returned as `CallTool.Result` with `isError: true`:
+    /// - `AppleScriptError.executionFailed`: AppleScript execution failed.
+    /// - `AppleScriptError.timeout`: AppleScript execution timed out.
     static func sendMessage(
         services: any AppleServicesProtocol,
         arguments: [String: Value]?
@@ -129,6 +145,9 @@ enum MessagesHandlers {
     ///   - services: The services container.
     ///   - arguments: to (required), body (required), scheduledAt (required).
     /// - Returns: Success confirmation with scheduled time.
+    ///
+    /// Service errors are caught and returned as `CallTool.Result` with `isError: true`:
+    /// - `AppleScriptError.executionFailed`: Always thrown — Messages.app does not support scheduled messages.
     static func scheduleMessage(
         services: any AppleServicesProtocol,
         arguments: [String: Value]?
