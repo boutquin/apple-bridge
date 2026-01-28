@@ -10,14 +10,8 @@ public actor MockMapsService: MapsService {
     /// Stubbed directions to return.
     public var stubDirections: String?
 
-    /// Stubbed guides to return.
-    public var stubGuides: [String] = []
-
     /// Tracks queries that have been opened in Maps.
     public var openedQueries: [String] = []
-
-    /// Tracks guides that have been opened.
-    public var openedGuides: [String] = []
 
     /// Error to throw (if set) for testing error scenarios.
     public var errorToThrow: (any Error)?
@@ -35,11 +29,6 @@ public actor MockMapsService: MapsService {
         self.stubDirections = directions
     }
 
-    /// Sets stubbed guides for testing.
-    public func setStubGuides(_ guides: [String]) {
-        self.stubGuides = guides
-    }
-
     /// Sets an error to throw on subsequent operations.
     public func setError(_ error: (any Error)?) {
         self.errorToThrow = error
@@ -48,11 +37,6 @@ public actor MockMapsService: MapsService {
     /// Gets opened queries for verification.
     public func getOpenedQueries() -> [String] {
         return openedQueries
-    }
-
-    /// Gets opened guides for verification.
-    public func getOpenedGuides() -> [String] {
-        return openedGuides
     }
 
     public func search(query: String, near: String?, limit: Int) async throws -> Page<Location> {
@@ -93,15 +77,5 @@ public actor MockMapsService: MapsService {
     public func open(query: String) async throws {
         if let error = errorToThrow { throw error }
         openedQueries.append(query)
-    }
-
-    public func listGuides() async throws -> Page<String> {
-        if let error = errorToThrow { throw error }
-        return Page(items: stubGuides, nextCursor: nil, hasMore: false)
-    }
-
-    public func openGuide(name: String) async throws {
-        if let error = errorToThrow { throw error }
-        openedGuides.append(name)
     }
 }

@@ -2,47 +2,60 @@ import Foundation
 import Testing
 import Adapters
 
-/// System tests for Maps domain using real AppleScript.
+/// System tests for Maps domain using MapKit.
 ///
-/// These tests verify that the maps service works correctly with the
-/// actual Apple Maps application. Maps has limited AppleScript support
-/// so tests focus on URL scheme-based operations.
+/// These tests verify that the maps service works correctly with
+/// real MapKit APIs to search for locations and get directions.
 ///
 /// ## Prerequisites
-/// - Apple Maps must be available
+/// - MapKit framework must be available
 /// - Set `APPLE_BRIDGE_SYSTEM_TESTS=1` environment variable
 ///
 /// ## Note
-/// Maps tests may launch the Maps app and could be slower than database tests.
-/// Some operations initiate searches but don't return detailed results.
+/// Maps tests require network access for geocoding and search.
+/// Results depend on Apple's Maps data and may vary by location.
 @Suite("Maps System Tests", .enabled(if: SystemTestHelper.systemTestsEnabled))
 struct MapsSystemTests {
 
-    /// Verifies that the maps service can initiate a search without crashing.
+    /// Verifies that the maps service can search for locations with real data.
     ///
-    /// Note: Apple Maps has limited AppleScript support. This test verifies
-    /// the service initializes and executes the search command without error,
-    /// but the actual search results may be empty (URL scheme based).
+    /// Uses MapKit's MKLocalSearch to find real locations with coordinates.
     @Test("Real maps search works")
     func testRealMapsSearch() async throws {
-        let service = MapsAppleScriptService()
+        let service = MapsKitService()
         let results = try await service.search(query: "Apple Park", near: nil, limit: 5)
 
-        // Just verify no crash and valid response structure
-        // Results may be empty due to URL scheme limitations
+        // MapKit should return actual results with coordinates
+        #expect(results.items.count >= 0)
+        #expect(results.items.count <= 5)
+
+        // If results found, verify they have coordinates
+        if let firstLocation = results.items.first {
+            #expect(firstLocation.latitude != nil)
+            #expect(firstLocation.longitude != nil)
+        }
+    }
+
+    /// Verifies that nearby search works with real MapKit data.
+    @Test("Real maps nearby search works")
+    func testRealMapsNearbySearch() async throws {
+        let service = MapsKitService()
+        let results = try await service.nearby(category: "coffee", near: "San Francisco", limit: 5)
+
+        // Should return nearby coffee shops
         #expect(results.items.count >= 0)
         #expect(results.items.count <= 5)
     }
 
-    /// Verifies that the maps service can list guides without crashing.
-    @Test("Real maps guides list works")
-    func testRealMapsGuidesList() async throws {
-        let service = MapsAppleScriptService()
-        let guides = try await service.listGuides()
+    /// Verifies that directions work with real MapKit data.
+    @Test("Real maps directions works")
+    func testRealMapsDirections() async throws {
+        let service = MapsKitService()
+        let directions = try await service.directions(from: "San Jose, CA", to: "San Francisco, CA", mode: "driving")
 
-        // Verify valid response structure
-        // User may have no guides, which is fine
-        // listGuides returns Page<String>, so check items.count
-        #expect(guides.items.count >= 0)
+        // Should return actual route information
+        if let directions = directions {
+            #expect(directions.contains("Distance:") || directions.contains("Directions from"))
+        }
     }
 }

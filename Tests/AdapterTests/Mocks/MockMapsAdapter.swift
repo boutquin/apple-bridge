@@ -13,9 +13,6 @@ public actor MockMapsAdapter: MapsAdapterProtocol {
     /// Stubbed locations to return from search operations.
     private var stubLocations: [LocationData] = []
 
-    /// Stubbed guides to return.
-    private var stubGuides: [GuideData] = []
-
     /// Stubbed directions response.
     private var stubDirections: String?
 
@@ -36,9 +33,6 @@ public actor MockMapsAdapter: MapsAdapterProtocol {
     /// Tracks locations opened.
     private var openedLocations: [String] = []
 
-    /// Tracks guides opened.
-    private var openedGuides: [String] = []
-
     // MARK: - Initialization
 
     /// Creates a new mock maps adapter.
@@ -49,11 +43,6 @@ public actor MockMapsAdapter: MapsAdapterProtocol {
     /// Sets stubbed locations for testing.
     public func setStubLocations(_ locations: [LocationData]) {
         self.stubLocations = locations
-    }
-
-    /// Sets stubbed guides for testing.
-    public func setStubGuides(_ guides: [GuideData]) {
-        self.stubGuides = guides
     }
 
     /// Sets stubbed directions response.
@@ -88,11 +77,6 @@ public actor MockMapsAdapter: MapsAdapterProtocol {
         return openedLocations
     }
 
-    /// Gets the opened guides for verification.
-    public func getOpenedGuides() -> [String] {
-        return openedGuides
-    }
-
     // MARK: - MapsAdapterProtocol
 
     public func searchLocations(query: String, near: String?, limit: Int) async throws -> [LocationData] {
@@ -121,15 +105,5 @@ public actor MockMapsAdapter: MapsAdapterProtocol {
     public func openLocation(query: String) async throws {
         if let error = errorToThrow { throw error }
         openedLocations.append(query)
-    }
-
-    public func fetchGuides() async throws -> [GuideData] {
-        if let error = errorToThrow { throw error }
-        return stubGuides
-    }
-
-    public func openGuide(name: String) async throws {
-        if let error = errorToThrow { throw error }
-        openedGuides.append(name)
     }
 }

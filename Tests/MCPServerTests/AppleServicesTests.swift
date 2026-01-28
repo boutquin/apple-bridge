@@ -70,6 +70,6 @@ struct AppleServicesTests {
         let registry = ToolRegistry.create(services: protocolServices)
 
         let definitions = await registry.definitions
-        #expect(definitions.count == 37)
+        #expect(definitions.count == 35)
     }
 }

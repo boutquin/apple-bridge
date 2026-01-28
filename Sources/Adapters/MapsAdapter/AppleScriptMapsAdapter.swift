@@ -3,22 +3,28 @@ import Core
 
 /// AppleScript-based implementation of `MapsAdapterProtocol`.
 ///
-/// Uses AppleScript to interact with Apple Maps for searching locations,
-/// getting directions, and managing guides. All operations are executed through
-/// an `AppleScriptRunnerProtocol` for testability.
+/// Uses AppleScript and URL schemes to interact with Apple Maps.
+/// This implementation opens Maps.app and performs searches via URL schemes,
+/// but cannot return actual location data (returns empty arrays).
+/// For real location data, use `MapKitAdapter` instead.
+///
+/// ## Limitations
+/// - Cannot extract location data from Maps app (returns empty arrays)
+/// - Directions returns placeholder text, not actual route information
+/// - Only opens Maps app with search query, doesn't return results
 ///
 /// ## Usage
 /// ```swift
-/// let adapter = RealMapsAdapter()
-/// let locations = try await adapter.searchLocations(query: "Coffee", near: "Cupertino", limit: 5)
+/// let adapter = AppleScriptMapsAdapter()
+/// try await adapter.openLocation(query: "Apple Park")  // Opens Maps
 /// ```
 ///
 /// For testing with a mock runner:
 /// ```swift
 /// let runner = MockAppleScriptRunner()
-/// let adapter = RealMapsAdapter(runner: runner)
+/// let adapter = AppleScriptMapsAdapter(runner: runner)
 /// ```
-public struct RealMapsAdapter: MapsAdapterProtocol, Sendable {
+public struct AppleScriptMapsAdapter: MapsAdapterProtocol, Sendable {
 
     /// The AppleScript runner to use for executing scripts.
     private let runner: any AppleScriptRunnerProtocol
@@ -56,8 +62,7 @@ public struct RealMapsAdapter: MapsAdapterProtocol, Sendable {
             -- Wait briefly for Maps to process
             delay 0.5
 
-            -- Return a placeholder response indicating the search was initiated
-            -- Full location data extraction requires MapKit integration
+            -- Return empty - AppleScript cannot extract location data from Maps
             return ""
             """
 
@@ -130,38 +135,6 @@ public struct RealMapsAdapter: MapsAdapterProtocol, Sendable {
         _ = try await runner.run(script: script)
     }
 
-    public func fetchGuides() async throws -> [GuideData] {
-        // Apple Maps doesn't expose guides via AppleScript directly
-        let script = """
-            tell application "Maps"
-                activate
-            end tell
-
-            -- Guides are not directly accessible via AppleScript
-            -- Return empty for now; full implementation requires MapKit
-            return ""
-            """
-
-        let result = try await runner.run(script: script)
-        return parseGuidesResponse(result)
-    }
-
-    public func openGuide(name: String) async throws {
-        let escapedName = escapeForAppleScript(name)
-
-        let script = """
-            tell application "Maps"
-                activate
-            end tell
-
-            -- Navigate to the guide by name using search
-            set searchURL to "maps://?q=\(escapedName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? escapedName)"
-            do shell script "open " & quoted form of searchURL
-            """
-
-        _ = try await runner.run(script: script)
-    }
-
     // MARK: - Private Helpers
 
     /// Escapes a string for use in AppleScript.
@@ -211,16 +184,11 @@ public struct RealMapsAdapter: MapsAdapterProtocol, Sendable {
 
         return locations
     }
-
-    /// Parses the AppleScript response for guides.
-    ///
-    /// Expected format: one guide name per line.
-    private func parseGuidesResponse(_ response: String) -> [GuideData] {
-        guard !response.isEmpty else {
-            return []
-        }
-
-        let names = response.components(separatedBy: "\n").filter { !$0.isEmpty }
-        return names.map { GuideData(name: $0) }
-    }
 }
+
+// MARK: - Backward Compatibility
+
+/// Type alias for backward compatibility.
+/// Use `AppleScriptMapsAdapter` directly in new code.
+@available(*, deprecated, renamed: "AppleScriptMapsAdapter")
+public typealias RealMapsAdapter = AppleScriptMapsAdapter

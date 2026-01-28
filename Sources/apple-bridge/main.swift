@@ -91,7 +91,9 @@ struct AppleBridge {
 
         // AppleScript-based services
         let mailService = MailAppleScriptService()
-        let mapsService = MapsAppleScriptService()
+
+        // MapKit-based services (for real location data)
+        let mapsService = MapsKitService()
 
         return AppleServices(
             calendar: calendarService,

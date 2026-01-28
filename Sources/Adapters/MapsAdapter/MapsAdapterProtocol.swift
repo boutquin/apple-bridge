@@ -41,22 +41,6 @@ public struct LocationData: Sendable, Equatable, Codable {
     }
 }
 
-/// Lightweight data representation of a guide (saved place collection).
-///
-/// This struct provides a Sendable representation of Maps guides that can be
-/// safely passed across actor boundaries. Used as the boundary type between
-/// adapter implementations and the service layer.
-public struct GuideData: Sendable, Equatable, Codable {
-    /// Name of the guide.
-    public let name: String
-
-    /// Creates a new guide data instance.
-    /// - Parameter name: Name of the guide.
-    public init(name: String) {
-        self.name = name
-    }
-}
-
 // MARK: - Protocol
 
 /// Protocol for interacting with Apple Maps.
@@ -66,14 +50,19 @@ public struct GuideData: Sendable, Equatable, Codable {
 /// All implementations must be `Sendable` for safe use across actor boundaries.
 ///
 /// ## Implementation Notes
-/// - MapKit implementation uses MKLocalSearch for location search
-/// - AppleScript implementation uses URL schemes for basic operations
-/// - The protocol uses generic data transfer objects (LocationData, GuideData) to
-///   decouple from specific framework types
+/// - MapKit implementation uses MKLocalSearch for location search and MKDirections for routes
+/// - AppleScript implementation uses URL schemes for basic operations (fallback)
+/// - The protocol uses LocationData as a generic DTO to decouple from specific framework types
+///
+/// ## Available Operations
+/// - `searchLocations`: Search for locations by query
+/// - `searchNearby`: Find nearby points of interest by category
+/// - `getDirections`: Get directions between two locations
+/// - `openLocation`: Open a location in the Maps app
 ///
 /// ## Example
 /// ```swift
-/// let adapter: MapsAdapterProtocol = RealMapsAdapter()
+/// let adapter: MapsAdapterProtocol = MapKitAdapter()
 /// let locations = try await adapter.searchLocations(query: "Coffee", near: "Cupertino", limit: 5)
 /// ```
 public protocol MapsAdapterProtocol: Sendable {
@@ -86,7 +75,6 @@ public protocol MapsAdapterProtocol: Sendable {
     ///   - near: Optional location to search near.
     ///   - limit: Maximum number of results to return.
     /// - Returns: Array of matching location data objects.
-    /// - Throws: `AppleScriptError` if Maps access fails.
     func searchLocations(query: String, near: String?, limit: Int) async throws -> [LocationData]
 
     /// Searches for nearby points of interest by category.
@@ -96,7 +84,6 @@ public protocol MapsAdapterProtocol: Sendable {
     ///   - limit: Maximum number of results to return.
     /// - Returns: Array of nearby location data objects.
     /// - Throws: `ValidationError.missingRequired` if category is empty.
-    /// - Throws: `AppleScriptError` if Maps access fails.
     func searchNearby(category: String, near: String?, limit: Int) async throws -> [LocationData]
 
     // MARK: - Directions
@@ -107,25 +94,11 @@ public protocol MapsAdapterProtocol: Sendable {
     ///   - to: Destination location (address or place name).
     ///   - mode: Transport mode ("driving", "walking", "transit").
     /// - Returns: Directions description or nil if route not found.
-    /// - Throws: `AppleScriptError` if Maps access fails.
     func getDirections(from: String, to: String, mode: String) async throws -> String?
 
     // MARK: - Open Operations
 
     /// Opens a location in the Maps app.
     /// - Parameter query: Location to open (address or place name).
-    /// - Throws: `AppleScriptError` if Maps cannot be opened.
     func openLocation(query: String) async throws
-
-    // MARK: - Guide Operations
-
-    /// Lists all saved guides.
-    /// - Returns: Array of guide data objects.
-    /// - Throws: `AppleScriptError` if Maps access fails.
-    func fetchGuides() async throws -> [GuideData]
-
-    /// Opens a saved guide in the Maps app.
-    /// - Parameter name: Name of the guide to open.
-    /// - Throws: `AppleScriptError` if Maps cannot be opened.
-    func openGuide(name: String) async throws
 }

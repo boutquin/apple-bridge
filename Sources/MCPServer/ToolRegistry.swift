@@ -4,7 +4,7 @@ import Core
 
 /// Registry of all MCP tools available in apple-bridge.
 ///
-/// The ToolRegistry holds the definitions of all 37 tools and their handlers.
+/// The ToolRegistry holds the definitions of all 35 tools and their handlers.
 /// At Phase 4, all handlers return NOT_IMPLEMENTED. Real handlers are wired in Phases 5-12.
 ///
 /// ## Usage
@@ -37,7 +37,7 @@ public actor ToolRegistry {
 
     // MARK: - Initialization
 
-    /// Creates a new tool registry with all 37 tools registered.
+    /// Creates a new tool registry with all 35 tools registered.
     /// - Parameter services: The services container to use for tool handlers.
     /// - Note: Uses a private initializer; use `create(services:)` factory method.
     private init(services: any AppleServicesProtocol, tools: [String: ToolEntry]) {
@@ -45,7 +45,7 @@ public actor ToolRegistry {
         self.tools = tools
     }
 
-    /// Creates a new tool registry with all 37 tools registered.
+    /// Creates a new tool registry with all 35 tools registered.
     /// - Parameter services: The services container to use for tool handlers.
     /// - Returns: A configured `ToolRegistry` instance.
     public static func create(services: any AppleServicesProtocol) -> ToolRegistry {
@@ -69,7 +69,7 @@ public actor ToolRegistry {
         // Mail tools (4) - Phase 11: Real handlers wired
         registerMailTools(into: &tools, services: services)
 
-        // Maps tools (6) - Phase 12: Real handlers wired
+        // Maps tools (4) - Phase 12: Real handlers wired
         registerMapsTools(into: &tools, services: services)
 
         return ToolRegistry(services: services, tools: tools)
@@ -658,19 +658,19 @@ public actor ToolRegistry {
         )
     }
 
-    // MARK: - Maps Tools (6)
+    // MARK: - Maps Tools (4)
 
     /// Registers maps tools with real handlers (Phase 12).
     private static func registerMapsTools(into tools: inout [String: ToolEntry], services: any AppleServicesProtocol) {
         registerWithHandler(
             into: &tools,
             name: "maps_search",
-            description: "Search for locations",
+            description: "Search for locations. Returns real location data with coordinates.",
             inputSchema: .object([
                 "type": "object",
                 "properties": .object([
-                    "query": .object(["type": "string", "description": "Search query"]),
-                    "near": .object(["type": "string", "description": "Location to search near"]),
+                    "query": .object(["type": "string", "description": "Search query (place name, address, etc.)"]),
+                    "near": .object(["type": "string", "description": "Location to search near (address or place name)"]),
                     "limit": .object(["type": "integer", "description": "Maximum number of results to return"])
                 ]),
                 "required": .array([.string("query")])
@@ -680,13 +680,29 @@ public actor ToolRegistry {
 
         registerWithHandler(
             into: &tools,
-            name: "maps_directions",
-            description: "Get directions between two locations",
+            name: "maps_nearby",
+            description: "Find nearby places by category. Returns points of interest with coordinates.",
             inputSchema: .object([
                 "type": "object",
                 "properties": .object([
-                    "from": .object(["type": "string", "description": "Starting location"]),
-                    "to": .object(["type": "string", "description": "Destination location"]),
+                    "category": .object(["type": "string", "description": "Category to search for (e.g., coffee, restaurant, gas station)"]),
+                    "near": .object(["type": "string", "description": "Location to search near (address or place name)"]),
+                    "limit": .object(["type": "integer", "description": "Maximum number of results to return"])
+                ]),
+                "required": .array([.string("category")])
+            ]),
+            handler: { args in await MapsHandlers.nearbyLocations(services: services, arguments: args) }
+        )
+
+        registerWithHandler(
+            into: &tools,
+            name: "maps_directions",
+            description: "Get directions between two locations. Returns route with distance and travel time.",
+            inputSchema: .object([
+                "type": "object",
+                "properties": .object([
+                    "from": .object(["type": "string", "description": "Starting location (address or place name)"]),
+                    "to": .object(["type": "string", "description": "Destination location (address or place name)"]),
                     "mode": .object(["type": "string", "enum": .array([.string("driving"), .string("walking"), .string("transit")]), "description": "Travel mode"])
                 ]),
                 "required": .array([.string("from"), .string("to")])
@@ -701,52 +717,11 @@ public actor ToolRegistry {
             inputSchema: .object([
                 "type": "object",
                 "properties": .object([
-                    "query": .object(["type": "string", "description": "Location to open"])
+                    "query": .object(["type": "string", "description": "Location to open (address or place name)"])
                 ]),
                 "required": .array([.string("query")])
             ]),
             handler: { args in await MapsHandlers.openLocation(services: services, arguments: args) }
-        )
-
-        registerWithHandler(
-            into: &tools,
-            name: "maps_list_guides",
-            description: "List saved guides",
-            inputSchema: .object([
-                "type": "object",
-                "properties": .object([:])
-            ]),
-            handler: { args in await MapsHandlers.listGuides(services: services, arguments: args) }
-        )
-
-        registerWithHandler(
-            into: &tools,
-            name: "maps_open_guide",
-            description: "Open a guide in the Maps app",
-            inputSchema: .object([
-                "type": "object",
-                "properties": .object([
-                    "name": .object(["type": "string", "description": "Guide name"])
-                ]),
-                "required": .array([.string("name")])
-            ]),
-            handler: { args in await MapsHandlers.openGuide(services: services, arguments: args) }
-        )
-
-        registerWithHandler(
-            into: &tools,
-            name: "maps_nearby",
-            description: "Find nearby places by category",
-            inputSchema: .object([
-                "type": "object",
-                "properties": .object([
-                    "category": .object(["type": "string", "description": "Category to search for (e.g., coffee, restaurant)"]),
-                    "near": .object(["type": "string", "description": "Location to search near"]),
-                    "limit": .object(["type": "integer", "description": "Maximum number of results to return"])
-                ]),
-                "required": .array([.string("category")])
-            ]),
-            handler: { args in await MapsHandlers.nearbyLocations(services: services, arguments: args) }
         )
     }
 }

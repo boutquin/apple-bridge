@@ -96,23 +96,4 @@ struct MapsServiceTests {
         #expect(opened[0] == "Apple Park")
     }
 
-    // MARK: - Guides Tests
-
-    @Test func testListGuides() async throws {
-        let mock = MockMapsService()
-        await mock.setStubGuides(["Coffee Shops", "Restaurants"])
-
-        let page = try await mock.listGuides()
-        #expect(page.items.count == 2)
-    }
-
-    @Test func testOpenGuide() async throws {
-        let mock = MockMapsService()
-
-        try await mock.openGuide(name: "Coffee Shops")
-
-        let opened = await mock.getOpenedGuides()
-        #expect(opened.count == 1)
-        #expect(opened[0] == "Coffee Shops")
-    }
 }

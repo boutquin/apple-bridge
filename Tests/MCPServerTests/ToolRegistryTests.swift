@@ -8,13 +8,13 @@ struct ToolRegistryTests {
 
     // MARK: - Initialization Tests
 
-    @Test("ToolRegistry initializes with all 37 tools")
+    @Test("ToolRegistry initializes with all 35 tools")
     func testToolRegistryInitializesWithAllTools() async throws {
         let services = makeTestServices()
         let registry = ToolRegistry.create(services: services)
 
         let definitions = await registry.definitions
-        #expect(definitions.count == 37, "Expected 37 tools, got \(definitions.count)")
+        #expect(definitions.count == 35, "Expected 35 tools, got \(definitions.count)")
     }
 
     @Test("ToolRegistry has no duplicate tool names")
@@ -34,7 +34,7 @@ struct ToolRegistryTests {
         let services = makeTestServices()
         let registry = ToolRegistry.create(services: services)
 
-        // All 37 tools are now implemented (Phase 12 complete)
+        // All 35 tools are now implemented (Phase 12 complete, minus 2 non-functional guide tools)
         // Verify maps_search returns an error for missing required parameter, not NOT_IMPLEMENTED
         let result = await registry.callTool(name: "maps_search", arguments: nil)
 
@@ -188,10 +188,11 @@ struct ToolRegistryTests {
         let definitions = await registry.definitions
         let mapsTools = definitions.filter { $0.name.hasPrefix("maps_") }
 
-        // 6 maps tools: search, directions, open, list_guides, open_guide, nearby
-        #expect(mapsTools.count == 6, "Expected 6 maps tools, got \(mapsTools.count)")
+        // 4 maps tools: search, nearby, directions, open
+        // Note: list_guides and open_guide were removed (no API exists for Apple Maps Guides)
+        #expect(mapsTools.count == 4, "Expected 4 maps tools, got \(mapsTools.count)")
 
-        let expectedNames = ["maps_search", "maps_directions", "maps_open", "maps_list_guides", "maps_open_guide", "maps_nearby"]
+        let expectedNames = ["maps_search", "maps_nearby", "maps_directions", "maps_open"]
         for name in expectedNames {
             #expect(mapsTools.contains { $0.name == name }, "Missing maps tool: \(name)")
         }

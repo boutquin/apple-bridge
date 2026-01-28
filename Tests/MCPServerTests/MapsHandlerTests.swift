@@ -167,64 +167,6 @@ struct MapsHandlerTests {
         #expect(result.isError == true)
     }
 
-    // MARK: - maps_list_guides Tests
-
-    @Test func listGuidesReturnsGuides() async throws {
-        let services = makeTestServices()
-        await services.mockMaps.setStubGuides(["Favorites", "Coffee Shops"])
-
-        let result = await MapsHandlers.listGuides(
-            services: services,
-            arguments: [:]
-        )
-
-        #expect(result.isError == false)
-        let content = try #require(result.content.first)
-        if case .text(let json) = content {
-            #expect(json.contains("Favorites"))
-            #expect(json.contains("Coffee Shops"))
-        }
-    }
-
-    @Test func listGuidesHandlesEmpty() async throws {
-        let services = makeTestServices()
-        await services.mockMaps.setStubGuides([])
-
-        let result = await MapsHandlers.listGuides(
-            services: services,
-            arguments: nil
-        )
-
-        #expect(result.isError == false)
-    }
-
-    // MARK: - maps_open_guide Tests
-
-    @Test func openGuide() async throws {
-        let services = makeTestServices()
-
-        let result = await MapsHandlers.openGuide(
-            services: services,
-            arguments: ["name": .string("Coffee Shops")]
-        )
-
-        #expect(result.isError == false)
-
-        let opened = await services.mockMaps.getOpenedGuides()
-        #expect(opened.contains("Coffee Shops"))
-    }
-
-    @Test func openGuideRequiresName() async throws {
-        let services = makeTestServices()
-
-        let result = await MapsHandlers.openGuide(
-            services: services,
-            arguments: [:]
-        )
-
-        #expect(result.isError == true)
-    }
-
     // MARK: - maps_nearby Tests
 
     @Test func nearbyReturnsLocations() async throws {

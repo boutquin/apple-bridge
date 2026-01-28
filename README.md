@@ -14,7 +14,7 @@ Apple Bridge exposes 7 macOS domains through MCP tools:
 | **Notes** | `notes_search`, `notes_list`, `notes_create` | SQLite (Full Disk Access) |
 | **Messages** | `messages_read`, `messages_send`, `messages_unread` | SQLite (Full Disk Access) |
 | **Mail** | `mail_search`, `mail_unread`, `mail_send` | AppleScript |
-| **Maps** | `maps_search`, `maps_directions`, `maps_guides` | AppleScript + URL Schemes |
+| **Maps** | `maps_search`, `maps_nearby`, `maps_directions`, `maps_open` | MapKit |
 
 ## Requirements
 
@@ -43,7 +43,7 @@ Apple Bridge requires various macOS permissions depending on which domains you u
 | **Contacts** | Contacts domain | System Settings → Privacy & Security → Contacts |
 | **Full Disk Access** | Notes, Messages | System Settings → Privacy & Security → Full Disk Access |
 | **Automation (Mail)** | Mail domain | System Settings → Privacy & Security → Automation |
-| **Automation (Maps)** | Maps domain | System Settings → Privacy & Security → Automation |
+| **Location Services** | Maps domain | System Settings → Privacy & Security → Location Services |
 
 ## Usage with Claude Desktop
 
@@ -210,7 +210,7 @@ Each domain uses the **Adapter Pattern** to decouple the service layer from spec
 | **Notes** | `NotesAdapterProtocol` | `NoteData`, `NoteFolderData` | `RealNotesAdapter` |
 | **Messages** | `MessagesAdapterProtocol` | `MessageData`, `ChatData` | `RealMessagesAdapter` |
 | **Mail** | `MailAdapterProtocol` | `EmailData`, `MailboxData` | `RealMailAdapter` |
-| **Maps** | `MapsAdapterProtocol` | `LocationData`, `GuideData` | `RealMapsAdapter` |
+| **Maps** | `MapsAdapterProtocol` | `LocationData` | `MapKitAdapter` |
 
 #### DTO Design Principles
 
@@ -314,8 +314,10 @@ Sources/Adapters/
 │   ├── MailAdapterProtocol.swift        # Protocol + EmailData DTO
 │   └── RealMailAdapter.swift            # AppleScript implementation
 ├── MapsAdapter/
-│   ├── MapsAdapterProtocol.swift        # Protocol + LocationData/GuideData DTOs
-│   └── RealMapsAdapter.swift            # AppleScript implementation
+│   ├── MapsAdapterProtocol.swift        # Protocol + LocationData DTO
+│   ├── MapKitAdapter.swift              # MapKit implementation (primary)
+│   ├── AppleScriptMapsAdapter.swift     # AppleScript implementation (fallback)
+│   └── MapsKitService.swift             # MapsService using MapKitAdapter
 ├── SQLiteAdapter/
 │   ├── SQLiteConnection.swift           # Low-level SQLite wrapper
 │   ├── SchemaValidation.swift           # Database schema validation
@@ -323,8 +325,7 @@ Sources/Adapters/
 │   └── MessagesSQLiteService.swift      # MessagesService using MessagesAdapter
 └── AppleScriptAdapter/
     ├── AppleScriptRunner.swift          # Actor for script execution
-    ├── MailAppleScriptService.swift     # MailService using MailAdapter
-    └── MapsAppleScriptService.swift     # MapsService using MapsAdapter
+    └── MailAppleScriptService.swift     # MailService using MailAdapter
 ```
 
 ### Swift 6 Concurrency
