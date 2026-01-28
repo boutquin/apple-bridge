@@ -37,7 +37,7 @@ public protocol CalendarService: Sendable {
     /// Retrieves a specific event by its identifier.
     /// - Parameter id: Unique identifier of the event.
     /// - Returns: The calendar event.
-    /// - Throws: `ValidationError.invalidField` if the event is not found.
+    /// - Throws: `ValidationError.notFound` if the event is not found.
     func getEvent(id: String) async throws -> CalendarEvent
 
     /// Creates a new calendar event.
@@ -57,16 +57,16 @@ public protocol CalendarService: Sendable {
     ///   - id: Unique identifier of the event to update.
     ///   - patch: Fields to update (nil fields are left unchanged).
     /// - Returns: The updated event.
-    /// - Throws: `ValidationError.invalidField` if the event is not found.
+    /// - Throws: `ValidationError.notFound` if the event is not found.
     func updateEvent(id: String, patch: CalendarEventPatch) async throws -> CalendarEvent
 
     /// Deletes a calendar event.
     /// - Parameter id: Unique identifier of the event to delete.
-    /// - Throws: `ValidationError.invalidField` if the event is not found.
+    /// - Throws: `ValidationError.notFound` if the event is not found.
     func deleteEvent(id: String) async throws
 
     /// Opens a calendar event in the Calendar app.
     /// - Parameter id: Unique identifier of the event to open.
-    /// - Throws: `ValidationError.invalidField` if the event is not found.
+    /// - Throws: `ValidationError.notFound` if the event is not found.
     func openEvent(id: String) async throws
 }
