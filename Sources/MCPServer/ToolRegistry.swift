@@ -66,8 +66,8 @@ public actor ToolRegistry {
         // Messages tools (5) - Phase 10: Real handlers wired
         registerMessagesTools(into: &tools, services: services)
 
-        // Mail tools (4)
-        registerMailTools(into: &tools)
+        // Mail tools (4) - Phase 11: Real handlers wired
+        registerMailTools(into: &tools, services: services)
 
         // Maps tools (6)
         registerMapsTools(into: &tools)
@@ -591,8 +591,9 @@ public actor ToolRegistry {
 
     // MARK: - Mail Tools (4)
 
-    private static func registerMailTools(into tools: inout [String: ToolEntry]) {
-        register(
+    /// Registers mail tools with real handlers (Phase 11).
+    private static func registerMailTools(into tools: inout [String: ToolEntry], services: any AppleServicesProtocol) {
+        registerWithHandler(
             into: &tools,
             name: "mail_search",
             description: "Search emails by query",
@@ -605,10 +606,11 @@ public actor ToolRegistry {
                     "cursor": .object(["type": "string", "description": "Pagination cursor"])
                 ]),
                 "required": .array([.string("query")])
-            ])
+            ]),
+            handler: { args in await MailHandlers.searchEmails(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "mail_unread",
             description: "Get unread emails",
@@ -618,10 +620,11 @@ public actor ToolRegistry {
                     "limit": .object(["type": "integer", "description": "Maximum number of emails to return"]),
                     "includeBody": .object(["type": "boolean", "description": "Whether to include email bodies"])
                 ])
-            ])
+            ]),
+            handler: { args in await MailHandlers.unreadEmails(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "mail_send",
             description: "Send an email",
@@ -635,10 +638,11 @@ public actor ToolRegistry {
                     "bcc": .object(["type": "array", "items": .object(["type": "string"]), "description": "BCC email addresses"])
                 ]),
                 "required": .array([.string("to"), .string("subject"), .string("body")])
-            ])
+            ]),
+            handler: { args in await MailHandlers.sendEmail(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "mail_compose",
             description: "Open a new email compose window",
@@ -649,7 +653,8 @@ public actor ToolRegistry {
                     "subject": .object(["type": "string", "description": "Email subject"]),
                     "body": .object(["type": "string", "description": "Email body"])
                 ])
-            ])
+            ]),
+            handler: { args in await MailHandlers.composeEmail(services: services, arguments: args) }
         )
     }
 

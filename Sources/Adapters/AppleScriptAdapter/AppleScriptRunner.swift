@@ -18,7 +18,7 @@ import Core
 /// ## Thread Safety
 /// As an actor, all method calls are automatically serialized.
 /// Concurrent calls will queue and execute one at a time.
-public actor AppleScriptRunner {
+public actor AppleScriptRunner: AppleScriptRunnerProtocol {
 
     /// Shared singleton instance.
     ///
@@ -62,25 +62,33 @@ public actor AppleScriptRunner {
             throw AppleScriptError.executionFailed(message: "Failed to start osascript: \(error.localizedDescription)")
         }
 
-        // Wait for completion
-        process.waitUntilExit()
+        // Use withTaskCancellationHandler to terminate process if task is cancelled
+        return try await withTaskCancellationHandler {
+            // Wait for completion
+            process.waitUntilExit()
 
-        // Check for cancellation after execution
-        try Task.checkCancellation()
+            // Check for cancellation after execution
+            try Task.checkCancellation()
 
-        // Check exit status
-        if process.terminationStatus != 0 {
-            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-            let errorMessage = String(data: errorData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
-                ?? "Unknown AppleScript error"
-            throw AppleScriptError.executionFailed(message: errorMessage)
+            // Check exit status
+            if process.terminationStatus != 0 {
+                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                let errorMessage = String(data: errorData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+                    ?? "Unknown AppleScript error"
+                throw AppleScriptError.executionFailed(message: errorMessage)
+            }
+
+            // Read output
+            let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: outputData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+            return output
+        } onCancel: {
+            // Terminate the process if the task is cancelled
+            if process.isRunning {
+                process.terminate()
+            }
         }
-
-        // Read output
-        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        let output = String(data: outputData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-
-        return output
     }
 
     /// Executes an AppleScript with a timeout.
