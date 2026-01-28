@@ -253,12 +253,16 @@ public struct MailAppleScriptService: MailService, Sendable {
     }
 
     /// Parses the AppleScript response for search results.
+    ///
+    /// Expected format: id\tsubject\tfrom\tto\tdate\tmailbox\tbody\tisRead
+    /// Requires all 8 fields for proper parsing (body may be empty string).
     private func parseSearchResponse(_ response: String) -> [Email] {
         let lines = response.components(separatedBy: "\n").filter { !$0.isEmpty }
 
         return lines.compactMap { line -> Email? in
             let parts = line.components(separatedBy: "\t")
-            guard parts.count >= 7 else { return nil }
+            // Require all 8 fields: id, subject, from, to, date, mailbox, body, isRead
+            guard parts.count >= 8 else { return nil }
 
             let id = parts[0]
             let subject = parts[1]
@@ -266,8 +270,8 @@ public struct MailAppleScriptService: MailService, Sendable {
             let to = parts[3]
             let dateString = parts[4]
             let mailbox = parts[5]
-            let body = parts.count > 6 && !parts[6].isEmpty ? parts[6] : nil
-            let isReadString = parts.count > 7 ? parts[7] : "true"
+            let body = !parts[6].isEmpty ? parts[6] : nil
+            let isReadString = parts[7]
             let isUnread = isReadString.lowercased() != "true"
 
             // Convert AppleScript date to ISO 8601
@@ -287,9 +291,13 @@ public struct MailAppleScriptService: MailService, Sendable {
     }
 
     /// Converts an AppleScript date string to ISO 8601 format.
+    ///
+    /// - Parameter dateString: The date string from AppleScript (e.g., "Saturday, January 27, 2026 at 10:00:00 AM").
+    /// - Returns: ISO 8601 formatted date string, or the original string if parsing fails.
+    ///
+    /// If parsing fails, returns the original date string rather than losing the data.
+    /// This preserves the original information for debugging while still providing a usable value.
     private func convertAppleScriptDate(_ dateString: String) -> String {
-        // AppleScript returns dates like "Saturday, January 27, 2026 at 10:00:00 AM"
-        // We need to convert to ISO 8601 format
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
 
@@ -310,9 +318,7 @@ public struct MailAppleScriptService: MailService, Sendable {
             }
         }
 
-        // Fallback: return current date in ISO format
-        let isoFormatter = ISO8601DateFormatter()
-        isoFormatter.formatOptions = [.withInternetDateTime]
-        return isoFormatter.string(from: Date())
+        // Fallback: return original string to preserve data rather than losing it
+        return dateString
     }
 }

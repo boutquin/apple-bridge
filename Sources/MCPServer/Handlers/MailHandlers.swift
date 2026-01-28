@@ -11,6 +11,20 @@ import Core
 /// - `mail_compose`: Open a new compose window
 enum MailHandlers {
 
+    // MARK: - Response Types
+
+    /// Response for successful email send operations.
+    private struct SendResponse: Encodable {
+        let sent: Bool
+        let to: [String]
+    }
+
+    /// Response for successful compose operations.
+    private struct ComposeResponse: Encodable {
+        let composed: Bool
+        let opened: Bool
+    }
+
     // MARK: - mail_search
 
     /// Searches emails matching a query.
@@ -103,11 +117,9 @@ enum MailHandlers {
         do {
             try await services.mail.send(to: toArray, subject: subject, body: body, cc: cc, bcc: bcc)
 
-            // Return success confirmation
-            return CallTool.Result(
-                content: [.text("{\"sent\": true, \"to\": \(toArrayJSON(toArray))}")],
-                isError: false
-            )
+            // Return success confirmation using type-safe Encodable
+            let response = SendResponse(sent: true, to: toArray)
+            return HandlerUtilities.successResult(response)
         } catch {
             return HandlerUtilities.errorResult(error)
         }
@@ -136,10 +148,9 @@ enum MailHandlers {
         do {
             try await services.mail.compose(to: to, subject: subject, body: body)
 
-            return CallTool.Result(
-                content: [.text("{\"composed\": true, \"opened\": true}")],
-                isError: false
-            )
+            // Return success confirmation using type-safe Encodable
+            let response = ComposeResponse(composed: true, opened: true)
+            return HandlerUtilities.successResult(response)
         } catch {
             return HandlerUtilities.errorResult(error)
         }
@@ -161,11 +172,5 @@ enum MailHandlers {
         default:
             return nil
         }
-    }
-
-    /// Converts a string array to JSON array string.
-    private static func toArrayJSON(_ array: [String]) -> String {
-        let quoted = array.map { "\"\($0)\"" }
-        return "[\(quoted.joined(separator: ", "))]"
     }
 }

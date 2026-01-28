@@ -329,4 +329,108 @@ struct MailAppleScriptServiceTests {
             // Expected
         }
     }
+
+    // MARK: - Edge Case Tests
+
+    @Test("unread handles empty response")
+    func testUnreadHandlesEmptyResponse() async throws {
+        let runner = MockAppleScriptRunner()
+        await runner.setStubResponse("")
+        let service = MailAppleScriptService(runner: runner)
+
+        let emails = try await service.unread(limit: 10, includeBody: false)
+
+        #expect(emails.isEmpty, "Empty response should produce empty array")
+    }
+
+    @Test("search handles empty response")
+    func testSearchHandlesEmptyResponse() async throws {
+        let runner = MockAppleScriptRunner()
+        await runner.setStubResponse("")
+        let service = MailAppleScriptService(runner: runner)
+
+        let emails = try await service.search(query: "nonexistent", limit: 10, includeBody: false)
+
+        #expect(emails.isEmpty, "Empty response should produce empty array")
+    }
+
+    @Test("unread skips malformed lines in response")
+    func testUnreadSkipsMalformedLines() async throws {
+        let runner = MockAppleScriptRunner()
+        // Valid line has 6+ tab-separated fields; malformed line has fewer
+        await runner.setStubResponse("""
+            malformed\tonly\ttwo
+            E1\tSubject\tsender@test.com\trecipient@test.com\t2026-01-27T10:00:00Z\tINBOX\t
+            incomplete
+            """)
+        let service = MailAppleScriptService(runner: runner)
+
+        let emails = try await service.unread(limit: 10, includeBody: false)
+
+        // Only the valid middle line should parse
+        #expect(emails.count == 1, "Should skip malformed lines")
+        #expect(emails.first?.subject == "Subject")
+    }
+
+    @Test("search skips lines with fewer than 8 fields")
+    func testSearchSkipsMalformedLines() async throws {
+        let runner = MockAppleScriptRunner()
+        // Search response needs 8 fields (includes isRead status)
+        await runner.setStubResponse("""
+            short\tline
+            E1\tSubject\tsender@test.com\trecipient@test.com\t2026-01-27T10:00:00Z\tINBOX\t\ttrue
+            only\tseven\tfields\there\tno\tisRead\tstatus
+            """)
+        let service = MailAppleScriptService(runner: runner)
+
+        let emails = try await service.search(query: "test", limit: 10, includeBody: false)
+
+        // Only the valid 8-field line should parse
+        #expect(emails.count == 1, "Should skip lines with fewer than 8 fields")
+        #expect(emails.first?.subject == "Subject")
+    }
+
+    @Test("date parser returns original string when format is unrecognized")
+    func testDateParserReturnsOriginalOnUnrecognizedFormat() async throws {
+        let runner = MockAppleScriptRunner()
+        // Use an unusual date format that won't be recognized
+        let unusualDate = "42nd of Smarch, Year 3000"
+        await runner.setStubResponse("""
+            E1\tSubject\tsender@test.com\trecipient@test.com\t\(unusualDate)\tINBOX\t
+            """)
+        let service = MailAppleScriptService(runner: runner)
+
+        let emails = try await service.unread(limit: 10, includeBody: false)
+
+        #expect(emails.count == 1)
+        // The original date string should be preserved when parsing fails
+        #expect(emails.first?.date == unusualDate, "Unrecognized date format should return original string")
+    }
+
+    @Test("unread handles response with special characters in body")
+    func testUnreadHandlesSpecialCharactersInBody() async throws {
+        let runner = MockAppleScriptRunner()
+        // Note: tabs and newlines would normally be escaped in real AppleScript output
+        await runner.setStubResponse("""
+            E1\tSubject with émojis 🎉\tsender@test.com\trecipient@test.com\t2026-01-27T10:00:00Z\tINBOX\tBody with <html> & "quotes"
+            """)
+        let service = MailAppleScriptService(runner: runner)
+
+        let emails = try await service.unread(limit: 10, includeBody: true)
+
+        #expect(emails.count == 1)
+        #expect(emails.first?.subject == "Subject with émojis 🎉")
+        #expect(emails.first?.body?.contains("<html>") == true)
+    }
+
+    @Test("search handles whitespace-only response")
+    func testSearchHandlesWhitespaceOnlyResponse() async throws {
+        let runner = MockAppleScriptRunner()
+        await runner.setStubResponse("   \n\n   \n")
+        let service = MailAppleScriptService(runner: runner)
+
+        let emails = try await service.search(query: "test", limit: 10, includeBody: false)
+
+        #expect(emails.isEmpty, "Whitespace-only response should produce empty array")
+    }
 }
