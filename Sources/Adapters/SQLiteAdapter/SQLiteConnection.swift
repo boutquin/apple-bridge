@@ -2,11 +2,13 @@ import Foundation
 import SQLite3
 import Core
 
-/// A lightweight wrapper around SQLite3 for read-only database access.
+/// A lightweight wrapper around SQLite3 for database access.
 ///
 /// `SQLiteConnection` provides a simple interface for querying macOS system databases
-/// (e.g., Notes, Messages) in read-only mode. It handles connection management,
-/// busy timeouts, and query execution with proper error handling.
+/// (e.g., Notes, Messages). It supports read-only mode (default) for safely reading
+/// system databases, or read-write mode for testing and creating new databases.
+/// It handles connection management, busy timeouts, and query execution with proper
+/// error handling.
 ///
 /// ## Usage
 /// ```swift
