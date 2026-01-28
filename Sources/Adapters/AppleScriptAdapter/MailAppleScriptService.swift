@@ -3,9 +3,8 @@ import Core
 
 /// AppleScript-based implementation of `MailService`.
 ///
-/// Uses AppleScript to interact with Apple Mail for reading, searching,
-/// and sending emails. All operations are executed through an `AppleScriptRunnerProtocol`
-/// for testability.
+/// Uses a `MailAdapterProtocol` to interact with Apple Mail for reading,
+/// searching, and sending emails. This enables dependency injection for testing.
 ///
 /// ## Usage
 /// ```swift
@@ -13,28 +12,35 @@ import Core
 /// let emails = try await service.unread(limit: 10, includeBody: false)
 /// ```
 ///
-/// For testing with a mock runner:
+/// For testing with a mock adapter:
 /// ```swift
-/// let runner = MockAppleScriptRunner()
-/// let service = MailAppleScriptService(runner: runner)
+/// let adapter = MockMailAdapter()
+/// let service = MailAppleScriptService(adapter: adapter)
 /// ```
 public struct MailAppleScriptService: MailService, Sendable {
 
-    /// The AppleScript runner to use for executing scripts.
-    private let runner: any AppleScriptRunnerProtocol
+    /// The adapter to use for mail operations.
+    private let adapter: any MailAdapterProtocol
 
     // MARK: - Initialization
 
-    /// Creates a new Mail service using the shared AppleScript runner.
+    /// Creates a new Mail service using the default adapter.
     public init() {
-        self.runner = AppleScriptRunner.shared
+        self.adapter = RealMailAdapter()
     }
 
-    /// Creates a new Mail service with a custom runner (for testing).
+    /// Creates a new Mail service with a custom adapter (for testing).
+    ///
+    /// - Parameter adapter: The mail adapter to use.
+    public init(adapter: any MailAdapterProtocol) {
+        self.adapter = adapter
+    }
+
+    /// Creates a new Mail service with a custom runner (for backward compatibility).
     ///
     /// - Parameter runner: The AppleScript runner to use.
     public init(runner: any AppleScriptRunnerProtocol) {
-        self.runner = runner
+        self.adapter = RealMailAdapter(runner: runner)
     }
 
     // MARK: - MailService Protocol
@@ -47,31 +53,8 @@ public struct MailAppleScriptService: MailService, Sendable {
     /// - Returns: Array of unread emails.
     /// - Throws: `AppleScriptError` if Mail access fails.
     public func unread(limit: Int, includeBody: Bool) async throws -> [Email] {
-        let bodyClause = includeBody ? "content of theMessage" : "\"\""
-
-        let script = """
-            tell application "Mail"
-                set resultList to {}
-                set unreadMessages to (messages of inbox whose read status is false)
-                set msgCount to count of unreadMessages
-                if msgCount > \(limit) then set msgCount to \(limit)
-                repeat with i from 1 to msgCount
-                    set theMessage to item i of unreadMessages
-                    set msgId to id of theMessage
-                    set msgSubject to subject of theMessage
-                    set msgFrom to sender of theMessage
-                    set msgTo to address of first to recipient of theMessage
-                    set msgDate to date received of theMessage
-                    set msgMailbox to name of mailbox of theMessage
-                    set msgBody to \(bodyClause)
-                    set end of resultList to (msgId as string) & "\\t" & msgSubject & "\\t" & msgFrom & "\\t" & msgTo & "\\t" & (msgDate as string) & "\\t" & msgMailbox & "\\t" & msgBody & "\\n"
-                end repeat
-                return resultList as string
-            end tell
-            """
-
-        let result = try await runner.run(script: script)
-        return parseEmailResponse(result, isUnread: true)
+        let emailData = try await adapter.fetchUnread(limit: limit, includeBody: includeBody)
+        return emailData.map { toEmail($0) }
     }
 
     /// Searches for emails matching a query string.
@@ -83,33 +66,8 @@ public struct MailAppleScriptService: MailService, Sendable {
     /// - Returns: Array of matching emails.
     /// - Throws: `AppleScriptError` if Mail access fails.
     public func search(query: String, limit: Int, includeBody: Bool) async throws -> [Email] {
-        let escapedQuery = escapeForAppleScript(query)
-        let bodyClause = includeBody ? "content of theMessage" : "\"\""
-
-        let script = """
-            tell application "Mail"
-                set resultList to {}
-                set allMessages to (messages of inbox whose subject contains "\(escapedQuery)" or content contains "\(escapedQuery)")
-                set msgCount to count of allMessages
-                if msgCount > \(limit) then set msgCount to \(limit)
-                repeat with i from 1 to msgCount
-                    set theMessage to item i of allMessages
-                    set msgId to id of theMessage
-                    set msgSubject to subject of theMessage
-                    set msgFrom to sender of theMessage
-                    set msgTo to address of first to recipient of theMessage
-                    set msgDate to date received of theMessage
-                    set msgMailbox to name of mailbox of theMessage
-                    set msgIsRead to read status of theMessage
-                    set msgBody to \(bodyClause)
-                    set end of resultList to (msgId as string) & "\\t" & msgSubject & "\\t" & msgFrom & "\\t" & msgTo & "\\t" & (msgDate as string) & "\\t" & msgMailbox & "\\t" & msgBody & "\\t" & (msgIsRead as string) & "\\n"
-                end repeat
-                return resultList as string
-            end tell
-            """
-
-        let result = try await runner.run(script: script)
-        return parseSearchResponse(result)
+        let emailData = try await adapter.searchEmails(query: query, limit: limit, includeBody: includeBody)
+        return emailData.map { toEmail($0) }
     }
 
     /// Sends an email.
@@ -122,49 +80,7 @@ public struct MailAppleScriptService: MailService, Sendable {
     ///   - bcc: Array of BCC email addresses (optional).
     /// - Throws: `AppleScriptError` if sending fails.
     public func send(to: [String], subject: String, body: String, cc: [String]?, bcc: [String]?) async throws {
-        let escapedSubject = escapeForAppleScript(subject)
-        let escapedBody = escapeForAppleScript(body)
-
-        var recipientCommands = ""
-        for recipient in to {
-            let escapedTo = escapeForAppleScript(recipient)
-            recipientCommands += """
-                        make new to recipient at end of to recipients with properties {address:"\(escapedTo)"}
-
-            """
-        }
-
-        if let ccList = cc {
-            for ccRecipient in ccList {
-                let escapedCc = escapeForAppleScript(ccRecipient)
-                recipientCommands += """
-                        make new cc recipient at end of cc recipients with properties {address:"\(escapedCc)"}
-
-            """
-            }
-        }
-
-        if let bccList = bcc {
-            for bccRecipient in bccList {
-                let escapedBcc = escapeForAppleScript(bccRecipient)
-                recipientCommands += """
-                        make new bcc recipient at end of bcc recipients with properties {address:"\(escapedBcc)"}
-
-            """
-            }
-        }
-
-        let script = """
-            tell application "Mail"
-                set newMessage to make new outgoing message with properties {subject:"\(escapedSubject)", content:"\(escapedBody)", visible:false}
-                tell newMessage
-            \(recipientCommands)
-                end tell
-                send newMessage
-            end tell
-            """
-
-        _ = try await runner.run(script: script)
+        try await adapter.sendEmail(to: to, subject: subject, body: body, cc: cc, bcc: bcc)
     }
 
     /// Opens the Mail app to compose a new email.
@@ -175,150 +91,22 @@ public struct MailAppleScriptService: MailService, Sendable {
     ///   - body: Pre-filled body (optional).
     /// - Throws: `AppleScriptError` if Mail cannot be opened.
     public func compose(to: [String]?, subject: String?, body: String?) async throws {
-        var properties: [String] = []
-
-        if let subject = subject {
-            properties.append("subject:\"\(escapeForAppleScript(subject))\"")
-        }
-        if let body = body {
-            properties.append("content:\"\(escapeForAppleScript(body))\"")
-        }
-        properties.append("visible:true")
-
-        let propertiesString = properties.joined(separator: ", ")
-
-        var recipientCommands = ""
-        if let toList = to {
-            for recipient in toList {
-                let escapedTo = escapeForAppleScript(recipient)
-                recipientCommands += """
-                    make new to recipient at end of to recipients with properties {address:"\(escapedTo)"}
-
-                """
-            }
-        }
-
-        let script = """
-            tell application "Mail"
-                activate
-                set newMessage to make new outgoing message with properties {\(propertiesString)}
-                tell newMessage
-            \(recipientCommands)
-                end tell
-            end tell
-            """
-
-        _ = try await runner.run(script: script)
+        try await adapter.composeEmail(to: to, subject: subject, body: body)
     }
 
     // MARK: - Private Helpers
 
-    /// Escapes a string for use in AppleScript.
-    private func escapeForAppleScript(_ string: String) -> String {
-        string
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-    }
-
-    /// Parses the AppleScript response for unread emails.
-    private func parseEmailResponse(_ response: String, isUnread: Bool) -> [Email] {
-        let lines = response.components(separatedBy: "\n").filter { !$0.isEmpty }
-
-        return lines.compactMap { line -> Email? in
-            let parts = line.components(separatedBy: "\t")
-            guard parts.count >= 6 else { return nil }
-
-            let id = parts[0]
-            let subject = parts[1]
-            let from = parts[2]
-            let to = parts[3]
-            let dateString = parts[4]
-            let mailbox = parts[5]
-            let body = parts.count > 6 && !parts[6].isEmpty ? parts[6] : nil
-
-            // Convert AppleScript date to ISO 8601
-            let date = convertAppleScriptDate(dateString)
-
-            return Email(
-                id: id,
-                subject: subject,
-                from: from,
-                to: [to],
-                date: date,
-                body: body,
-                mailbox: mailbox,
-                isUnread: isUnread
-            )
-        }
-    }
-
-    /// Parses the AppleScript response for search results.
-    ///
-    /// Expected format: id\tsubject\tfrom\tto\tdate\tmailbox\tbody\tisRead
-    /// Requires all 8 fields for proper parsing (body may be empty string).
-    private func parseSearchResponse(_ response: String) -> [Email] {
-        let lines = response.components(separatedBy: "\n").filter { !$0.isEmpty }
-
-        return lines.compactMap { line -> Email? in
-            let parts = line.components(separatedBy: "\t")
-            // Require all 8 fields: id, subject, from, to, date, mailbox, body, isRead
-            guard parts.count >= 8 else { return nil }
-
-            let id = parts[0]
-            let subject = parts[1]
-            let from = parts[2]
-            let to = parts[3]
-            let dateString = parts[4]
-            let mailbox = parts[5]
-            let body = !parts[6].isEmpty ? parts[6] : nil
-            let isReadString = parts[7]
-            let isUnread = isReadString.lowercased() != "true"
-
-            // Convert AppleScript date to ISO 8601
-            let date = convertAppleScriptDate(dateString)
-
-            return Email(
-                id: id,
-                subject: subject,
-                from: from,
-                to: [to],
-                date: date,
-                body: body,
-                mailbox: mailbox,
-                isUnread: isUnread
-            )
-        }
-    }
-
-    /// Converts an AppleScript date string to ISO 8601 format.
-    ///
-    /// - Parameter dateString: The date string from AppleScript (e.g., "Saturday, January 27, 2026 at 10:00:00 AM").
-    /// - Returns: ISO 8601 formatted date string, or the original string if parsing fails.
-    ///
-    /// If parsing fails, returns the original date string rather than losing the data.
-    /// This preserves the original information for debugging while still providing a usable value.
-    private func convertAppleScriptDate(_ dateString: String) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-
-        // Try common AppleScript date formats
-        let formats = [
-            "EEEE, MMMM d, yyyy 'at' h:mm:ss a",
-            "EEEE, MMMM d, yyyy, h:mm:ss a",
-            "MMMM d, yyyy 'at' h:mm:ss a",
-            "yyyy-MM-dd HH:mm:ss"
-        ]
-
-        for format in formats {
-            formatter.dateFormat = format
-            if let date = formatter.date(from: dateString) {
-                let isoFormatter = ISO8601DateFormatter()
-                isoFormatter.formatOptions = [.withInternetDateTime]
-                return isoFormatter.string(from: date)
-            }
-        }
-
-        // Fallback: return original string to preserve data rather than losing it
-        return dateString
+    /// Converts EmailData to Email model.
+    private func toEmail(_ data: EmailData) -> Email {
+        Email(
+            id: data.id,
+            subject: data.subject,
+            from: data.from,
+            to: data.to,
+            date: data.date,
+            body: data.body,
+            mailbox: data.mailbox,
+            isUnread: data.isUnread
+        )
     }
 }

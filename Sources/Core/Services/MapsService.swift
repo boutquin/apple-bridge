@@ -3,8 +3,14 @@ import Foundation
 /// Protocol for interacting with Apple Maps.
 ///
 /// Defines operations for searching locations, getting directions,
-/// and managing guides. All implementations must be `Sendable` for
+/// and opening locations in Maps. All implementations must be `Sendable` for
 /// safe use across actor boundaries.
+///
+/// ## Available Operations
+/// - `search`: Search for locations by query
+/// - `nearby`: Find nearby points of interest by category
+/// - `directions`: Get directions between two locations
+/// - `open`: Open a location in the Maps app
 ///
 /// ## Example
 /// ```swift
@@ -41,12 +47,4 @@ public protocol MapsService: Sendable {
     /// Opens a location in the Maps app.
     /// - Parameter query: Location to open (address or place name).
     func open(query: String) async throws
-
-    /// Lists all saved guides.
-    /// - Returns: A paginated response containing guide names.
-    func listGuides() async throws -> Page<String>
-
-    /// Opens a saved guide in the Maps app.
-    /// - Parameter name: Name of the guide to open.
-    func openGuide(name: String) async throws
 }

@@ -133,9 +133,9 @@ swift test --filter FDA
 apple-bridge/
 ├── Sources/
 │   ├── apple-bridge/       # Main executable
-│   ├── Core/               # Domain models and protocols
-│   ├── Adapters/           # macOS framework adapters
-│   └── MCPServer/          # MCP protocol implementation
+│   ├── Core/               # Domain models, service protocols, errors
+│   ├── Adapters/           # macOS framework adapters (see Architecture)
+│   └── MCPServer/          # MCP protocol implementation and handlers
 ├── Tests/
 │   ├── CoreTests/          # Unit tests for Core
 │   ├── AdapterTests/       # Unit tests for Adapters
@@ -157,11 +157,183 @@ The `TestUtilities` module provides shared testing infrastructure:
 
 ## Architecture
 
+### Three-Layer Architecture
+
+Apple Bridge uses a clean three-layer architecture that separates concerns and enables comprehensive testing:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        MCP Handlers                             │
+│  (MCPServer/Handlers/)                                          │
+│  Receives MCP tool calls, validates arguments, returns JSON     │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Service Layer                              │
+│  (Core/Services/)                                               │
+│  Domain protocols (CalendarService, NotesService, etc.)         │
+│  Uses domain models (CalendarEvent, Note, Message, etc.)        │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Adapter Layer                              │
+│  (Adapters/)                                                    │
+│  Adapter protocols + Real implementations                        │
+│  Uses DTOs (CalendarEventData, NoteData, MessageData, etc.)     │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    macOS Frameworks                             │
+│  EventKit, Contacts, SQLite, AppleScript                        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Adapter Pattern
+
+Each domain uses the **Adapter Pattern** to decouple the service layer from specific macOS framework implementations. This provides:
+
+1. **Testability**: Mock adapters can be injected for unit testing without macOS permissions
+2. **Flexibility**: Alternative implementations can be swapped (e.g., MapKit vs AppleScript for Maps)
+3. **Clean Boundaries**: DTOs provide Sendable-safe data transfer across actor boundaries
+4. **Implementation Hiding**: Service layer doesn't know if data comes from SQLite, EventKit, or AppleScript
+
+#### Adapter Protocols by Domain
+
+| Domain | Adapter Protocol | DTOs | Real Implementation |
+|--------|------------------|------|---------------------|
+| **Calendar** | `CalendarAdapterProtocol` | `CalendarEventData`, `CalendarData` | `RealEventKitAdapter` |
+| **Reminders** | `CalendarAdapterProtocol` | `ReminderData`, `ReminderListData` | `RealEventKitAdapter` |
+| **Contacts** | `ContactsAdapterProtocol` | `ContactData` | `RealContactsAdapter` |
+| **Notes** | `NotesAdapterProtocol` | `NoteData`, `NoteFolderData` | `RealNotesAdapter` |
+| **Messages** | `MessagesAdapterProtocol` | `MessageData`, `ChatData` | `RealMessagesAdapter` |
+| **Mail** | `MailAdapterProtocol` | `EmailData`, `MailboxData` | `RealMailAdapter` |
+| **Maps** | `MapsAdapterProtocol` | `LocationData`, `GuideData` | `RealMapsAdapter` |
+
+#### DTO Design Principles
+
+Data Transfer Objects (DTOs) follow these principles:
+
+- **Sendable**: All DTOs are `Sendable` for safe actor boundary crossing
+- **Codable**: DTOs are `Codable` for serialization when needed
+- **Equatable**: DTOs are `Equatable` for testing assertions
+- **Implementation-Agnostic**: No framework-specific prefixes (e.g., `CalendarEventData` not `EKEventData`)
+- **Lightweight**: Only essential fields, no framework dependencies
+
+Example DTO:
+
+```swift
+public struct CalendarEventData: Sendable, Equatable {
+    public let id: String
+    public let title: String
+    public let startDate: Date
+    public let endDate: Date
+    public let calendarId: String
+    public let location: String?
+    public let notes: String?
+}
+```
+
+#### Service-to-Adapter Flow
+
+Services delegate to adapters and convert between domain models and DTOs:
+
+```swift
+// Service implementation
+public struct NotesSQLiteService: NotesService {
+    private let adapter: any NotesAdapterProtocol
+
+    public func get(id: String) async throws -> Note {
+        let noteData = try await adapter.fetchNote(id: id)
+        return toNote(noteData)  // Convert DTO to domain model
+    }
+
+    private func toNote(_ data: NoteData) -> Note {
+        Note(id: data.id, title: data.title, body: data.body, ...)
+    }
+}
+```
+
+#### Mock Adapters for Testing
+
+Each domain has a corresponding mock adapter for unit testing:
+
+| Domain | Mock Adapter | Location |
+|--------|--------------|----------|
+| Calendar/Reminders | `MockEventKitAdapter` | `Tests/AdapterTests/Mocks/` |
+| Contacts | `MockContactsAdapter` | `Tests/AdapterTests/Mocks/` |
+| Notes | `MockNotesAdapter` | `Tests/AdapterTests/Mocks/` |
+| Messages | `MockMessagesAdapter` | `Tests/AdapterTests/Mocks/` |
+| Mail | `MockMailAdapter` | `Tests/AdapterTests/Mocks/` |
+| Maps | `MockMapsAdapter` | `Tests/AdapterTests/Mocks/` |
+
+Mock adapters are actors that:
+- Store stubbed data for return values
+- Track method calls for verification
+- Allow error injection for testing error paths
+
+Example usage:
+
+```swift
+func testSearchNotes() async throws {
+    let mockAdapter = MockNotesAdapter()
+    await mockAdapter.setStubNotes([
+        NoteData(id: "1", title: "Meeting Notes", body: "...", modifiedAt: "...")
+    ])
+
+    let service = NotesSQLiteService(adapter: mockAdapter)
+    let results = try await service.search(query: "Meeting", limit: 10, includeBody: true)
+
+    XCTAssertEqual(results.items.count, 1)
+    XCTAssertEqual(results.items[0].title, "Meeting Notes")
+}
+```
+
+### Adapter File Locations
+
+```
+Sources/Adapters/
+├── EventKitAdapter/
+│   ├── CalendarAdapterProtocol.swift    # Protocol + Calendar/Reminder DTOs
+│   ├── RealEventKitAdapter.swift        # EventKit implementation
+│   ├── EventKitCalendarService.swift    # CalendarService using adapter
+│   └── EventKitRemindersService.swift   # RemindersService using adapter
+├── ContactsAdapter/
+│   ├── ContactsAdapterProtocol.swift    # Protocol + ContactData DTO
+│   ├── RealContactsAdapter.swift        # Contacts framework implementation
+│   └── ContactsFrameworkService.swift   # ContactsService using adapter
+├── NotesAdapter/
+│   ├── NotesAdapterProtocol.swift       # Protocol + NoteData DTO
+│   └── RealNotesAdapter.swift           # SQLite implementation
+├── MessagesAdapter/
+│   ├── MessagesAdapterProtocol.swift    # Protocol + MessageData/ChatData DTOs
+│   └── RealMessagesAdapter.swift        # SQLite + AppleScript implementation
+├── MailAdapter/
+│   ├── MailAdapterProtocol.swift        # Protocol + EmailData DTO
+│   └── RealMailAdapter.swift            # AppleScript implementation
+├── MapsAdapter/
+│   ├── MapsAdapterProtocol.swift        # Protocol + LocationData/GuideData DTOs
+│   └── RealMapsAdapter.swift            # AppleScript implementation
+├── SQLiteAdapter/
+│   ├── SQLiteConnection.swift           # Low-level SQLite wrapper
+│   ├── SchemaValidation.swift           # Database schema validation
+│   ├── NotesSQLiteService.swift         # NotesService using NotesAdapter
+│   └── MessagesSQLiteService.swift      # MessagesService using MessagesAdapter
+└── AppleScriptAdapter/
+    ├── AppleScriptRunner.swift          # Actor for script execution
+    ├── MailAppleScriptService.swift     # MailService using MailAdapter
+    └── MapsAppleScriptService.swift     # MapsService using MapsAdapter
+```
+
 ### Swift 6 Concurrency
 
 Apple Bridge is fully Swift 6 compliant with strict concurrency checking:
 
 - All service protocols are `Sendable`
+- All adapter protocols are `Sendable`
+- All DTOs are `Sendable`
 - Adapters use actors where needed for thread safety
 - No data races or Sendable violations
 
@@ -170,8 +342,12 @@ Apple Bridge is fully Swift 6 compliant with strict concurrency checking:
 Errors follow a consistent pattern:
 
 - `ToolError` for MCP-level errors (invalid arguments, unknown tool)
-- `ServiceError` for domain-level errors (permission denied, not found)
-- All errors include remediation instructions when applicable
+- `ValidationError` for domain validation (not found, missing required fields)
+- `PermissionError` for access issues (calendar denied, full disk access required)
+- `AppleScriptError` for AppleScript execution failures
+- `SQLiteError` for database errors
+
+All errors include remediation instructions when applicable.
 
 ### MCP Protocol
 
