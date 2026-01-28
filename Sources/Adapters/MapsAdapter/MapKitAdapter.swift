@@ -2,11 +2,11 @@ import Foundation
 import Core
 
 #if canImport(MapKit)
-import MapKit
+@preconcurrency import MapKit
 #endif
 
 #if canImport(CoreLocation)
-import CoreLocation
+@preconcurrency import CoreLocation
 #endif
 
 /// MapKit-based implementation of `MapsAdapterProtocol`.
