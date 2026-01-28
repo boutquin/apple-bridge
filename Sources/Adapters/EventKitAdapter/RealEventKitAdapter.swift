@@ -29,7 +29,9 @@ public actor RealEventKitAdapter: EventKitAdapterProtocol {
 
     #if canImport(EventKit)
     /// Shared event store for calendar and reminders access.
-    private let eventStore = EKEventStore()
+    /// Marked nonisolated(unsafe) because EKEventStore handles its own thread safety
+    /// and Swift 6's strict concurrency checking doesn't recognize this.
+    private nonisolated(unsafe) let eventStore = EKEventStore()
     #endif
 
     /// Creates a new EventKit adapter.

@@ -29,7 +29,9 @@ public actor RealContactsAdapter: ContactsAdapterProtocol {
 
     #if canImport(Contacts)
     /// Shared contact store for contacts access.
-    private let contactStore = CNContactStore()
+    /// Marked nonisolated(unsafe) because CNContactStore handles its own thread safety
+    /// and Swift 6's strict concurrency checking doesn't recognize this.
+    private nonisolated(unsafe) let contactStore = CNContactStore()
     #endif
 
     /// Creates a new Contacts adapter.
