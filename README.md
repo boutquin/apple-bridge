@@ -315,8 +315,7 @@ Sources/Adapters/
 │   └── RealMailAdapter.swift            # AppleScript implementation
 ├── MapsAdapter/
 │   ├── MapsAdapterProtocol.swift        # Protocol + LocationData DTO
-│   ├── MapKitAdapter.swift              # MapKit implementation (primary)
-│   ├── AppleScriptMapsAdapter.swift     # AppleScript implementation (fallback)
+│   ├── MapKitAdapter.swift              # MapKit implementation
 │   └── MapsKitService.swift             # MapsService using MapKitAdapter
 ├── SQLiteAdapter/
 │   ├── SQLiteConnection.swift           # Low-level SQLite wrapper

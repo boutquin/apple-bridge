@@ -4,8 +4,7 @@ import Core
 /// Service layer implementation of `MapsService` using `MapsAdapterProtocol`.
 ///
 /// Provides a unified interface to Maps functionality through a configurable adapter.
-/// By default uses `MapKitAdapter` for real location data, with `AppleScriptMapsAdapter`
-/// available as a fallback.
+/// By default uses `MapKitAdapter` for real location data.
 ///
 /// ## Usage
 /// ```swift
@@ -98,10 +97,3 @@ public struct MapsKitService: MapsService, Sendable {
         )
     }
 }
-
-// MARK: - Backward Compatibility
-
-/// Type alias for backward compatibility.
-/// Use `MapsKitService` directly in new code.
-@available(*, deprecated, renamed: "MapsKitService")
-public typealias MapsAppleScriptService = MapsKitService
