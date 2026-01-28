@@ -64,8 +64,8 @@ public struct ContactsFrameworkService: ContactsService, Sendable {
 
     // MARK: - Private Helpers
 
-    /// Converts a `CNContactData` to a `Contact`.
-    private func convertToContact(_ data: CNContactData) -> Contact {
+    /// Converts a `ContactData` to a `Contact`.
+    private func convertToContact(_ data: ContactData) -> Contact {
         Contact(
             id: data.id,
             displayName: data.displayName,

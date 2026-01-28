@@ -14,10 +14,10 @@ public actor MockContactsAdapter: ContactsAdapterProtocol {
     private var accessGranted: Bool = true
 
     /// Stubbed contacts to return from fetch operations.
-    private var stubContacts: [CNContactData] = []
+    private var stubContacts: [ContactData] = []
 
     /// Stubbed Me contact (user's contact card).
-    private var stubMeContact: CNContactData?
+    private var stubMeContact: ContactData?
 
     /// Error to throw (if set) for testing error scenarios.
     private var errorToThrow: (any Error)?
@@ -40,12 +40,12 @@ public actor MockContactsAdapter: ContactsAdapterProtocol {
     }
 
     /// Sets stubbed contacts for testing.
-    public func setStubContacts(_ contacts: [CNContactData]) {
+    public func setStubContacts(_ contacts: [ContactData]) {
         self.stubContacts = contacts
     }
 
     /// Sets the stubbed Me contact for testing.
-    public func setStubMeContact(_ contact: CNContactData?) {
+    public func setStubMeContact(_ contact: ContactData?) {
         self.stubMeContact = contact
     }
 
@@ -68,7 +68,7 @@ public actor MockContactsAdapter: ContactsAdapterProtocol {
         return accessGranted
     }
 
-    public func fetchContacts(query: String, limit: Int) async throws -> [CNContactData] {
+    public func fetchContacts(query: String, limit: Int) async throws -> [ContactData] {
         if let error = errorToThrow { throw error }
 
         // Filter by query (case-insensitive search in displayName, email, phone)
@@ -81,7 +81,7 @@ public actor MockContactsAdapter: ContactsAdapterProtocol {
         return Array(filtered.prefix(limit))
     }
 
-    public func fetchContact(id: String) async throws -> CNContactData {
+    public func fetchContact(id: String) async throws -> ContactData {
         if let error = errorToThrow { throw error }
 
         guard let contact = stubContacts.first(where: { $0.id == id }) else {
@@ -91,7 +91,7 @@ public actor MockContactsAdapter: ContactsAdapterProtocol {
         return contact
     }
 
-    public func fetchMeContact() async throws -> CNContactData? {
+    public func fetchMeContact() async throws -> ContactData? {
         if let error = errorToThrow { throw error }
         return stubMeContact
     }

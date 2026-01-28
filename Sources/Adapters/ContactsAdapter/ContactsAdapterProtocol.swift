@@ -3,12 +3,12 @@ import Core
 
 // MARK: - Contact Data Transfer Object
 
-/// Lightweight data representation of a CNContact.
+/// Lightweight data representation of a contact.
 ///
 /// This struct provides a Sendable, Codable representation of contacts
 /// that can be safely passed across actor boundaries without requiring direct
-/// Contacts framework access.
-public struct CNContactData: Sendable, Equatable, Codable {
+/// framework access.
+public struct ContactData: Sendable, Equatable, Codable {
     /// Unique identifier for the contact.
     public let id: String
 
@@ -42,14 +42,14 @@ public struct CNContactData: Sendable, Equatable, Codable {
 
 // MARK: - Protocol
 
-/// Protocol for interacting with Apple Contacts via the Contacts framework.
+/// Protocol for interacting with Apple Contacts.
 ///
-/// This protocol abstracts Contacts framework operations to enable testing with mock implementations.
+/// This protocol abstracts contact operations to enable testing with mock implementations.
 /// All implementations must be `Sendable` for safe use across actor boundaries.
 ///
 /// ## Implementation Notes
-/// - Real implementations use CNContactStore for contact access
-/// - The protocol uses `CNContactData` instead of `CNContact` directly to enable Sendable conformance
+/// - Real implementations may use CNContactStore, AppleScript, or other mechanisms
+/// - The protocol uses `ContactData` DTOs to enable Sendable conformance
 ///
 /// ## Example
 /// ```swift
@@ -75,18 +75,18 @@ public protocol ContactsAdapterProtocol: Sendable {
     ///   - limit: Maximum number of contacts to return.
     /// - Returns: Array of matching contact data objects.
     /// - Throws: `PermissionError.contactsDenied` if contacts access is not granted.
-    func fetchContacts(query: String, limit: Int) async throws -> [CNContactData]
+    func fetchContacts(query: String, limit: Int) async throws -> [ContactData]
 
     /// Fetches a specific contact by identifier.
     /// - Parameter id: The contact identifier.
     /// - Returns: The contact data.
     /// - Throws: `ValidationError.notFound` if the contact doesn't exist.
-    func fetchContact(id: String) async throws -> CNContactData
+    func fetchContact(id: String) async throws -> ContactData
 
     /// Fetches the user's own contact card (Me card).
     /// - Returns: The user's contact data, or nil if not configured.
     /// - Throws: `PermissionError.contactsDenied` if contacts access is not granted.
-    func fetchMeContact() async throws -> CNContactData?
+    func fetchMeContact() async throws -> ContactData?
 
     /// Opens a contact in the Contacts app.
     /// - Parameter id: Contact identifier.

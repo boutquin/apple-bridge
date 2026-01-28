@@ -49,7 +49,7 @@ public actor RealContactsAdapter: ContactsAdapterProtocol {
 
     // MARK: - Contact Operations
 
-    public func fetchContacts(query: String, limit: Int) async throws -> [CNContactData] {
+    public func fetchContacts(query: String, limit: Int) async throws -> [ContactData] {
         #if canImport(Contacts)
         let keysToFetch: [CNKeyDescriptor] = [
             CNContactIdentifierKey as CNKeyDescriptor,
@@ -82,7 +82,7 @@ public actor RealContactsAdapter: ContactsAdapterProtocol {
             let email = contact.emailAddresses.first?.value as String?
             let phone = contact.phoneNumbers.first?.value.stringValue
 
-            return CNContactData(
+            return ContactData(
                 id: contact.identifier,
                 displayName: displayName,
                 email: email,
@@ -94,7 +94,7 @@ public actor RealContactsAdapter: ContactsAdapterProtocol {
         #endif
     }
 
-    public func fetchContact(id: String) async throws -> CNContactData {
+    public func fetchContact(id: String) async throws -> ContactData {
         #if canImport(Contacts)
         let keysToFetch: [CNKeyDescriptor] = [
             CNContactIdentifierKey as CNKeyDescriptor,
@@ -112,7 +112,7 @@ public actor RealContactsAdapter: ContactsAdapterProtocol {
             let email = contact.emailAddresses.first?.value as String?
             let phone = contact.phoneNumbers.first?.value.stringValue
 
-            return CNContactData(
+            return ContactData(
                 id: contact.identifier,
                 displayName: displayName,
                 email: email,
@@ -126,7 +126,7 @@ public actor RealContactsAdapter: ContactsAdapterProtocol {
         #endif
     }
 
-    public func fetchMeContact() async throws -> CNContactData? {
+    public func fetchMeContact() async throws -> ContactData? {
         #if canImport(Contacts)
         // Note: CNContactStore doesn't have a direct API for "me" card on macOS.
         // Unlike iOS, macOS doesn't support CNContactStore.fetchMeCard().

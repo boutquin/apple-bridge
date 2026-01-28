@@ -28,8 +28,8 @@ struct ContactsAdapterTests {
     func testContactsSearchReturnsMatches() async throws {
         let adapter = MockContactsAdapter()
         await adapter.setStubContacts([
-            CNContactData(id: "C1", displayName: "John Doe", email: "john@example.com", phone: nil),
-            CNContactData(id: "C2", displayName: "Jane Smith", email: "jane@example.com", phone: nil)
+            ContactData(id: "C1", displayName: "John Doe", email: "john@example.com", phone: nil),
+            ContactData(id: "C2", displayName: "Jane Smith", email: "jane@example.com", phone: nil)
         ])
         let service = ContactsFrameworkService(adapter: adapter)
 
@@ -42,8 +42,8 @@ struct ContactsAdapterTests {
     func testContactsSearchFiltersByEmail() async throws {
         let adapter = MockContactsAdapter()
         await adapter.setStubContacts([
-            CNContactData(id: "C1", displayName: "John Doe", email: "johnny@example.com", phone: nil),
-            CNContactData(id: "C2", displayName: "Jane Smith", email: "jane@example.com", phone: nil)
+            ContactData(id: "C1", displayName: "John Doe", email: "johnny@example.com", phone: nil),
+            ContactData(id: "C2", displayName: "Jane Smith", email: "jane@example.com", phone: nil)
         ])
         let service = ContactsFrameworkService(adapter: adapter)
 
@@ -56,8 +56,8 @@ struct ContactsAdapterTests {
     func testContactsSearchFiltersByPhone() async throws {
         let adapter = MockContactsAdapter()
         await adapter.setStubContacts([
-            CNContactData(id: "C1", displayName: "John Doe", email: nil, phone: "+1-555-0100"),
-            CNContactData(id: "C2", displayName: "Jane Smith", email: nil, phone: "+1-555-0200")
+            ContactData(id: "C1", displayName: "John Doe", email: nil, phone: "+1-555-0100"),
+            ContactData(id: "C2", displayName: "Jane Smith", email: nil, phone: "+1-555-0200")
         ])
         let service = ContactsFrameworkService(adapter: adapter)
 
@@ -70,9 +70,9 @@ struct ContactsAdapterTests {
     func testContactsSearchRespectsLimit() async throws {
         let adapter = MockContactsAdapter()
         await adapter.setStubContacts([
-            CNContactData(id: "C1", displayName: "Test Contact 1", email: nil, phone: nil),
-            CNContactData(id: "C2", displayName: "Test Contact 2", email: nil, phone: nil),
-            CNContactData(id: "C3", displayName: "Test Contact 3", email: nil, phone: nil)
+            ContactData(id: "C1", displayName: "Test Contact 1", email: nil, phone: nil),
+            ContactData(id: "C2", displayName: "Test Contact 2", email: nil, phone: nil),
+            ContactData(id: "C3", displayName: "Test Contact 3", email: nil, phone: nil)
         ])
         let service = ContactsFrameworkService(adapter: adapter)
 
@@ -84,7 +84,7 @@ struct ContactsAdapterTests {
     func testContactsSearchReturnsEmptyForNoMatches() async throws {
         let adapter = MockContactsAdapter()
         await adapter.setStubContacts([
-            CNContactData(id: "C1", displayName: "John Doe", email: nil, phone: nil)
+            ContactData(id: "C1", displayName: "John Doe", email: nil, phone: nil)
         ])
         let service = ContactsFrameworkService(adapter: adapter)
 
@@ -98,7 +98,7 @@ struct ContactsAdapterTests {
     func testContactsGetReturnsContactById() async throws {
         let adapter = MockContactsAdapter()
         await adapter.setStubContacts([
-            CNContactData(id: "C1", displayName: "John Doe", email: "john@example.com", phone: "+1-555-0100")
+            ContactData(id: "C1", displayName: "John Doe", email: "john@example.com", phone: "+1-555-0100")
         ])
         let service = ContactsFrameworkService(adapter: adapter)
 
@@ -125,7 +125,7 @@ struct ContactsAdapterTests {
     @Test("ContactsFrameworkService me returns user's contact card")
     func testContactsMeReturnsUsersCard() async throws {
         let adapter = MockContactsAdapter()
-        await adapter.setStubMeContact(CNContactData(
+        await adapter.setStubMeContact(ContactData(
             id: "ME",
             displayName: "Pierre Boutquin",
             email: "pierre@example.com",
@@ -154,7 +154,7 @@ struct ContactsAdapterTests {
     func testContactsOpenSucceedsForValidId() async throws {
         let adapter = MockContactsAdapter()
         await adapter.setStubContacts([
-            CNContactData(id: "C1", displayName: "John Doe", email: nil, phone: nil)
+            ContactData(id: "C1", displayName: "John Doe", email: nil, phone: nil)
         ])
         let service = ContactsFrameworkService(adapter: adapter)
 
