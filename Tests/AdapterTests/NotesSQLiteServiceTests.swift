@@ -211,6 +211,24 @@ struct NotesSQLiteServiceTests {
         #expect(note.title == "Title Only")
     }
 
+    @Test("create throws notFound for invalid folderId")
+    func testCreateThrowsNotFoundForInvalidFolderId() async throws {
+        let tempPath = try makeWritableFixtureCopy()
+        defer { try? FileManager.default.removeItem(atPath: tempPath) }
+
+        let service = NotesSQLiteService(dbPath: tempPath)
+
+        do {
+            _ = try await service.create(title: "Test", body: nil, folderId: "999999")
+            Issue.record("Should have thrown ValidationError.notFound")
+        } catch let error as ValidationError {
+            // Expected
+            #expect(error.userMessage.contains("Folder"))
+        } catch {
+            Issue.record("Wrong error type: \(error)")
+        }
+    }
+
     // MARK: - Open Tests
 
     @Test("open succeeds for valid ID")

@@ -50,6 +50,17 @@ public struct NotesSQLiteService: NotesService, Sendable {
 
     // MARK: - NotesService Protocol
 
+    /// Searches notes by query string.
+    ///
+    /// Searches in both note titles and snippets (body text).
+    ///
+    /// - Parameters:
+    ///   - query: The search query. Use empty string to match all notes.
+    ///   - limit: Maximum number of notes to return.
+    ///   - includeBody: Whether to include note body content in results.
+    /// - Returns: A paginated page of matching notes.
+    /// - Throws: `PermissionError.fullDiskAccessDenied` if database access is denied.
+    /// - Throws: `SQLiteError` for database-related errors.
     public func search(query: String, limit: Int, includeBody: Bool) async throws -> Page<Note> {
         let db = try openDatabase()
         defer { db.close() }
@@ -85,6 +96,13 @@ public struct NotesSQLiteService: NotesService, Sendable {
         return Page(items: notes, nextCursor: nil, hasMore: false)
     }
 
+    /// Retrieves a note by its ID.
+    ///
+    /// - Parameter id: The note's unique identifier (Z_PK as string).
+    /// - Returns: The note with full body content.
+    /// - Throws: `ValidationError.notFound` if no note exists with the given ID.
+    /// - Throws: `PermissionError.fullDiskAccessDenied` if database access is denied.
+    /// - Throws: `SQLiteError` for database-related errors.
     public func get(id: String) async throws -> Note {
         let db = try openDatabase()
         defer { db.close() }
@@ -112,6 +130,16 @@ public struct NotesSQLiteService: NotesService, Sendable {
         return note
     }
 
+    /// Creates a new note.
+    ///
+    /// - Parameters:
+    ///   - title: The note title.
+    ///   - body: Optional note body content.
+    ///   - folderId: Optional folder ID. If nil, uses default folder (Z_PK=1).
+    /// - Returns: The ID of the newly created note.
+    /// - Throws: `ValidationError.notFound` if the specified folder does not exist.
+    /// - Throws: `PermissionError.fullDiskAccessDenied` if database access is denied.
+    /// - Throws: `SQLiteError` for database-related errors.
     public func create(title: String, body: String?, folderId: String?) async throws -> String {
         // Open writable connection
         let db = try SQLiteConnection(path: dbPath, readOnly: false)
@@ -128,6 +156,14 @@ public struct NotesSQLiteService: NotesService, Sendable {
         // Folder ID - use provided or default to 1
         let folder: Int64
         if let folderIdStr = folderId, let fid = Int64(folderIdStr) {
+            // Validate folder exists
+            let folderCheck = try db.query(
+                "SELECT Z_PK FROM ZICCLOUDSYNCINGOBJECT WHERE Z_PK = ? AND ZFOLDER IS NULL",
+                parameters: [fid]
+            )
+            if folderCheck.isEmpty {
+                throw ValidationError.notFound(resource: "Folder", id: folderIdStr)
+            }
             folder = fid
         } else {
             folder = 1 // Default folder
@@ -150,6 +186,14 @@ public struct NotesSQLiteService: NotesService, Sendable {
         return String(lastId)
     }
 
+    /// Opens a note in the Notes app.
+    ///
+    /// Currently activates Notes.app but does not navigate to the specific note.
+    /// Full implementation would require `notes://` URL scheme or AppleScript navigation.
+    ///
+    /// - Parameter id: The note's unique identifier.
+    /// - Throws: `ValidationError.notFound` if no note exists with the given ID.
+    /// - Throws: `PermissionError.fullDiskAccessDenied` if database access is denied.
     public func open(id: String) async throws {
         // First verify the note exists
         _ = try await get(id: id)
@@ -162,8 +206,11 @@ public struct NotesSQLiteService: NotesService, Sendable {
             end tell
             """
 
-        // Note: Full implementation would use note:// URL scheme or AppleScript
-        // For now, we just verify the note exists and open Notes app
+        // TODO: Implement full note navigation using notes:// URL scheme or AppleScript
+        // Currently only activates Notes.app without navigating to the specific note.
+        // Full implementation would need to:
+        // 1. Use `notes://showNote?identifier=<id>` URL scheme, OR
+        // 2. Use AppleScript to select the note by its properties
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
         process.arguments = ["-e", script]
