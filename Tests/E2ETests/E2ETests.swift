@@ -5,15 +5,29 @@ import Testing
 ///
 /// These tests verify that the server correctly handles MCP protocol messages
 /// by starting the actual executable and communicating via stdin/stdout.
+/// Unlike unit tests that mock dependencies, E2E tests exercise the full
+/// server stack including process management, JSON-RPC parsing, and signal handling.
+///
+/// ## Prerequisites
+/// - The project must be built (`swift build`) before running these tests
+/// - The executable must be accessible in the build directory
+///
+/// ## Test Categories
+/// - **13.1 Main Entry Point**: Server startup, protocol version, tool listing
+/// - **13.2 Signal Handling**: Graceful shutdown on SIGINT
 @Suite("E2E Tests")
 struct E2ETests {
 
     // MARK: - 13.1 Main Entry Point Tests
 
+    /// Verifies that the server starts successfully and responds to tools/list.
+    ///
+    /// This is the most basic E2E test - if the server can initialize and
+    /// list its tools, the core MCP infrastructure is working.
     @Test("Server starts and responds to tools/list")
     func testServerStartsAndRespondsToToolsList() async throws {
         let (stdout, _) = try await E2ETestHelper.runAppleBridge(input: """
-        {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}
+        \(E2ETestHelper.initializeMessage)
         {"jsonrpc":"2.0","id":2,"method":"tools/list"}
         """)
 
@@ -21,11 +35,13 @@ struct E2ETests {
         #expect(stdout.contains("reminders_create"))
     }
 
+    /// Verifies that the server reports the correct MCP protocol version.
+    ///
+    /// Protocol version compatibility is critical for client-server communication.
+    /// The server must report the version it was built against.
     @Test("Server returns correct protocol version")
     func testServerReturnsCorrectProtocolVersion() async throws {
-        let (stdout, _) = try await E2ETestHelper.runAppleBridge(input: """
-        {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}
-        """)
+        let (stdout, _) = try await E2ETestHelper.runAppleBridge(input: E2ETestHelper.initializeMessage)
 
         // Parse the initialize response
         let lines = stdout.split(separator: "\n")
@@ -36,11 +52,12 @@ struct E2ETests {
         #expect(initResponse?.contains("2024-11-05") == true)
     }
 
+    /// Verifies that the server reports its name and version in the initialize response.
+    ///
+    /// Clients may use server info for logging, debugging, or compatibility checks.
     @Test("Server reports correct version")
     func testServerReportsCorrectVersion() async throws {
-        let (stdout, _) = try await E2ETestHelper.runAppleBridge(input: """
-        {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}
-        """)
+        let (stdout, _) = try await E2ETestHelper.runAppleBridge(input: E2ETestHelper.initializeMessage)
 
         // Server should report its version in the response
         #expect(stdout.contains("apple-bridge"))
@@ -49,6 +66,14 @@ struct E2ETests {
 
     // MARK: - 13.2 Signal Handling Tests
 
+    /// Verifies that the server shuts down gracefully when receiving SIGINT.
+    ///
+    /// Graceful shutdown is important for:
+    /// - Releasing system resources properly
+    /// - Completing in-flight operations
+    /// - Not leaving zombie processes
+    ///
+    /// The server should exit with code 0 (graceful), 130 (SIGINT standard), or 2.
     @Test("Server handles SIGINT gracefully")
     func testServerHandlesSIGINT() async throws {
         // Find the built executable
@@ -68,10 +93,7 @@ struct E2ETests {
         try process.run()
 
         // Send initialize to start the server
-        let initMessage = """
-        {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}
-
-        """
+        let initMessage = E2ETestHelper.initializeMessage + "\n"
         if let data = initMessage.data(using: .utf8) {
             try stdinPipe.fileHandleForWriting.write(contentsOf: data)
         }
@@ -89,7 +111,7 @@ struct E2ETests {
         while process.isRunning {
             if Date().timeIntervalSince(startTime) > timeout {
                 process.terminate()
-                Issue.record("Server did not exit gracefully after SIGINT")
+                #expect(Bool(false), "Server did not exit gracefully after SIGINT within \(timeout) seconds")
                 return
             }
             try await Task.sleep(for: .milliseconds(50))

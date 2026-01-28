@@ -3,13 +3,36 @@ import Foundation
 /// Shared test helper for E2E tests.
 ///
 /// Provides utilities for running the apple-bridge executable and capturing output.
+/// All methods are static since this is a stateless utility namespace.
 enum E2ETestHelper {
+
+    // MARK: - Constants
+
+    /// Default timeout for process execution in seconds.
+    private static let defaultTimeout: TimeInterval = 5.0
+
+    /// Poll interval when waiting for process completion.
+    private static let pollInterval: Duration = .milliseconds(50)
+
+    /// Standard initialize message for MCP protocol handshake.
+    ///
+    /// Use this constant to avoid duplicating the JSON-RPC initialize message
+    /// across multiple tests.
+    static let initializeMessage = """
+    {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}
+    """
+
+    // MARK: - Public Methods
 
     /// Runs the apple-bridge executable with the given input and returns stdout/stderr.
     ///
+    /// This method starts the apple-bridge process, sends the provided JSON-RPC messages
+    /// via stdin, waits for the process to complete (with timeout), and captures all output.
+    ///
     /// - Parameter input: The JSON-RPC messages to send to stdin (newline-delimited)
     /// - Returns: A tuple of (stdout, stderr) output strings
-    /// - Throws: If the process fails to start or times out
+    /// - Throws: `E2EError.executableNotFound` if the executable cannot be located,
+    ///           `E2EError.timeout` if the process doesn't complete within the timeout
     static func runAppleBridge(input: String) async throws -> (stdout: String, stderr: String) {
         let executableURL = try findExecutable()
 
@@ -40,14 +63,13 @@ enum E2ETestHelper {
 
         // Wait for output with timeout
         let startTime = Date()
-        let timeout: TimeInterval = 5.0
 
         while process.isRunning {
-            if Date().timeIntervalSince(startTime) > timeout {
+            if Date().timeIntervalSince(startTime) > defaultTimeout {
                 process.terminate()
                 throw E2EError.timeout
             }
-            try await Task.sleep(for: .milliseconds(50))
+            try await Task.sleep(for: pollInterval)
         }
 
         // Read all output
@@ -61,6 +83,12 @@ enum E2ETestHelper {
     }
 
     /// Finds the apple-bridge executable in the build directory.
+    ///
+    /// Searches for the executable in the following order:
+    /// 1. `BUILT_PRODUCTS_DIR` environment variable (Xcode builds)
+    /// 2. `BUILD_DIR` environment variable (Swift Package Manager)
+    /// 3. Common relative paths from the current directory
+    /// 4. System PATH via `/usr/bin/which`
     ///
     /// - Returns: The URL to the executable
     /// - Throws: `E2EError.executableNotFound` if the executable cannot be located
@@ -97,7 +125,21 @@ enum E2ETestHelper {
             }
         }
 
-        // Try `which` as fallback
+        // Try `which` as fallback (errors are expected and ignored here)
+        if let pathFromWhich = try? findExecutableViaWhich() {
+            return pathFromWhich
+        }
+
+        throw E2EError.executableNotFound
+    }
+
+    // MARK: - Private Methods
+
+    /// Attempts to find the executable using the system `which` command.
+    ///
+    /// - Returns: The URL to the executable if found in PATH
+    /// - Throws: If the executable is not found in PATH
+    private static func findExecutableViaWhich() throws -> URL {
         let whichProcess = Process()
         whichProcess.executableURL = URL(fileURLWithPath: "/usr/bin/which")
         whichProcess.arguments = ["apple-bridge"]
@@ -105,24 +147,37 @@ enum E2ETestHelper {
         let pipe = Pipe()
         whichProcess.standardOutput = pipe
 
-        try? whichProcess.run()
+        try whichProcess.run()
         whichProcess.waitUntilExit()
 
-        if whichProcess.terminationStatus == 0 {
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let path = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
-               !path.isEmpty {
-                return URL(fileURLWithPath: path)
-            }
+        guard whichProcess.terminationStatus == 0 else {
+            throw E2EError.executableNotFound
         }
 
-        throw E2EError.executableNotFound
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let path = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !path.isEmpty else {
+            throw E2EError.executableNotFound
+        }
+
+        return URL(fileURLWithPath: path)
     }
 }
 
 /// Errors that can occur during E2E testing.
-enum E2EError: Error, CustomStringConvertible {
+///
+/// These errors indicate infrastructure problems with running the E2E tests,
+/// not failures in the code being tested.
+enum E2EError: Error, Sendable, CustomStringConvertible {
+    /// The apple-bridge executable could not be found.
+    ///
+    /// This typically means the project hasn't been built yet.
+    /// Run `swift build` to create the executable.
     case executableNotFound
+
+    /// The process did not complete within the allowed time.
+    ///
+    /// This may indicate the server is hanging or there's a deadlock.
     case timeout
 
     var description: String {
