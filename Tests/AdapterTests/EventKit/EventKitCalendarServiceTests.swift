@@ -35,8 +35,8 @@ struct EventKitCalendarServiceTests {
     func testListEventsReturnsPaginatedEvents() async throws {
         let mock = MockEventKitAdapter()
         let events = [
-            EKEventData(id: "E1", title: "Event 1", startDate: baseDate.addingTimeInterval(3600), endDate: baseDate.addingTimeInterval(7200), calendarId: "cal-1", location: nil, notes: nil),
-            EKEventData(id: "E2", title: "Event 2", startDate: baseDate.addingTimeInterval(10800), endDate: baseDate.addingTimeInterval(14400), calendarId: "cal-1", location: nil, notes: nil)
+            CalendarEventData(id: "E1", title: "Event 1", startDate: baseDate.addingTimeInterval(3600), endDate: baseDate.addingTimeInterval(7200), calendarId: "cal-1", location: nil, notes: nil),
+            CalendarEventData(id: "E2", title: "Event 2", startDate: baseDate.addingTimeInterval(10800), endDate: baseDate.addingTimeInterval(14400), calendarId: "cal-1", location: nil, notes: nil)
         ]
         await mock.setStubEvents(events)
 
@@ -52,7 +52,7 @@ struct EventKitCalendarServiceTests {
     func testListEventsRespectsLimit() async throws {
         let mock = MockEventKitAdapter()
         let events = (1...10).map { i in
-            EKEventData(
+            CalendarEventData(
                 id: "E\(i)",
                 title: "Event \(i)",
                 startDate: baseDate.addingTimeInterval(Double(i) * 3600),
@@ -76,9 +76,9 @@ struct EventKitCalendarServiceTests {
     func testListEventsFiltersByDateRange() async throws {
         let mock = MockEventKitAdapter()
         let events = [
-            EKEventData(id: "E1", title: "Too Early", startDate: baseDate.addingTimeInterval(-7200), endDate: baseDate.addingTimeInterval(-3600), calendarId: "cal-1", location: nil, notes: nil),
-            EKEventData(id: "E2", title: "In Range", startDate: baseDate.addingTimeInterval(3600), endDate: baseDate.addingTimeInterval(7200), calendarId: "cal-1", location: nil, notes: nil),
-            EKEventData(id: "E3", title: "Too Late", startDate: baseDate.addingTimeInterval(100000), endDate: baseDate.addingTimeInterval(103600), calendarId: "cal-1", location: nil, notes: nil)
+            CalendarEventData(id: "E1", title: "Too Early", startDate: baseDate.addingTimeInterval(-7200), endDate: baseDate.addingTimeInterval(-3600), calendarId: "cal-1", location: nil, notes: nil),
+            CalendarEventData(id: "E2", title: "In Range", startDate: baseDate.addingTimeInterval(3600), endDate: baseDate.addingTimeInterval(7200), calendarId: "cal-1", location: nil, notes: nil),
+            CalendarEventData(id: "E3", title: "Too Late", startDate: baseDate.addingTimeInterval(100000), endDate: baseDate.addingTimeInterval(103600), calendarId: "cal-1", location: nil, notes: nil)
         ]
         await mock.setStubEvents(events)
 
@@ -93,10 +93,10 @@ struct EventKitCalendarServiceTests {
         #expect(page.items[0].title == "In Range")
     }
 
-    @Test("listEvents converts EKEventData to CalendarEvent")
+    @Test("listEvents converts CalendarEventData to CalendarEvent")
     func testListEventsConvertsToCalendarEvent() async throws {
         let mock = MockEventKitAdapter()
-        let event = EKEventData(
+        let event = CalendarEventData(
             id: "E1",
             title: "Test Event",
             startDate: baseDate,
@@ -127,8 +127,8 @@ struct EventKitCalendarServiceTests {
     func testSearchEventsFiltersByTitle() async throws {
         let mock = MockEventKitAdapter()
         let events = [
-            EKEventData(id: "E1", title: "Team Meeting", startDate: baseDate, endDate: baseDate.addingTimeInterval(3600), calendarId: "cal-1", location: nil, notes: nil),
-            EKEventData(id: "E2", title: "Lunch", startDate: baseDate.addingTimeInterval(7200), endDate: baseDate.addingTimeInterval(10800), calendarId: "cal-1", location: nil, notes: nil)
+            CalendarEventData(id: "E1", title: "Team Meeting", startDate: baseDate, endDate: baseDate.addingTimeInterval(3600), calendarId: "cal-1", location: nil, notes: nil),
+            CalendarEventData(id: "E2", title: "Lunch", startDate: baseDate.addingTimeInterval(7200), endDate: baseDate.addingTimeInterval(10800), calendarId: "cal-1", location: nil, notes: nil)
         ]
         await mock.setStubEvents(events)
 
@@ -143,8 +143,8 @@ struct EventKitCalendarServiceTests {
     func testSearchEventsFiltersByLocation() async throws {
         let mock = MockEventKitAdapter()
         let events = [
-            EKEventData(id: "E1", title: "Meeting", startDate: baseDate, endDate: baseDate.addingTimeInterval(3600), calendarId: "cal-1", location: "Conference Room A", notes: nil),
-            EKEventData(id: "E2", title: "Lunch", startDate: baseDate.addingTimeInterval(7200), endDate: baseDate.addingTimeInterval(10800), calendarId: "cal-1", location: "Cafeteria", notes: nil)
+            CalendarEventData(id: "E1", title: "Meeting", startDate: baseDate, endDate: baseDate.addingTimeInterval(3600), calendarId: "cal-1", location: "Conference Room A", notes: nil),
+            CalendarEventData(id: "E2", title: "Lunch", startDate: baseDate.addingTimeInterval(7200), endDate: baseDate.addingTimeInterval(10800), calendarId: "cal-1", location: "Cafeteria", notes: nil)
         ]
         await mock.setStubEvents(events)
 
@@ -159,8 +159,8 @@ struct EventKitCalendarServiceTests {
     func testSearchEventsFiltersByNotes() async throws {
         let mock = MockEventKitAdapter()
         let events = [
-            EKEventData(id: "E1", title: "Meeting", startDate: baseDate, endDate: baseDate.addingTimeInterval(3600), calendarId: "cal-1", location: nil, notes: "Discuss Q1 budget"),
-            EKEventData(id: "E2", title: "Standup", startDate: baseDate.addingTimeInterval(7200), endDate: baseDate.addingTimeInterval(10800), calendarId: "cal-1", location: nil, notes: "Daily sync")
+            CalendarEventData(id: "E1", title: "Meeting", startDate: baseDate, endDate: baseDate.addingTimeInterval(3600), calendarId: "cal-1", location: nil, notes: "Discuss Q1 budget"),
+            CalendarEventData(id: "E2", title: "Standup", startDate: baseDate.addingTimeInterval(7200), endDate: baseDate.addingTimeInterval(10800), calendarId: "cal-1", location: nil, notes: "Daily sync")
         ]
         await mock.setStubEvents(events)
 
@@ -175,7 +175,7 @@ struct EventKitCalendarServiceTests {
     func testSearchEventsIsCaseInsensitive() async throws {
         let mock = MockEventKitAdapter()
         let events = [
-            EKEventData(id: "E1", title: "IMPORTANT Meeting", startDate: baseDate, endDate: baseDate.addingTimeInterval(3600), calendarId: "cal-1", location: nil, notes: nil)
+            CalendarEventData(id: "E1", title: "IMPORTANT Meeting", startDate: baseDate, endDate: baseDate.addingTimeInterval(3600), calendarId: "cal-1", location: nil, notes: nil)
         ]
         await mock.setStubEvents(events)
 
@@ -190,7 +190,7 @@ struct EventKitCalendarServiceTests {
     @Test("getEvent returns event by ID")
     func testGetEventReturnsEventById() async throws {
         let mock = MockEventKitAdapter()
-        let event = EKEventData(id: "E1", title: "Test Event", startDate: baseDate, endDate: baseDate.addingTimeInterval(3600), calendarId: "cal-1", location: "Office", notes: "Notes")
+        let event = CalendarEventData(id: "E1", title: "Test Event", startDate: baseDate, endDate: baseDate.addingTimeInterval(3600), calendarId: "cal-1", location: "Office", notes: "Notes")
         await mock.setStubEvents([event])
 
         let service = EventKitCalendarService(adapter: mock)
@@ -284,7 +284,7 @@ struct EventKitCalendarServiceTests {
     @Test("updateEvent returns updated event")
     func testUpdateEventReturnsUpdated() async throws {
         let mock = MockEventKitAdapter()
-        let event = EKEventData(id: "E1", title: "Original", startDate: baseDate, endDate: baseDate.addingTimeInterval(3600), calendarId: "cal-1", location: nil, notes: nil)
+        let event = CalendarEventData(id: "E1", title: "Original", startDate: baseDate, endDate: baseDate.addingTimeInterval(3600), calendarId: "cal-1", location: nil, notes: nil)
         await mock.setStubEvents([event])
 
         let service = EventKitCalendarService(adapter: mock)
@@ -310,7 +310,7 @@ struct EventKitCalendarServiceTests {
     @Test("deleteEvent removes event")
     func testDeleteEventRemovesEvent() async throws {
         let mock = MockEventKitAdapter()
-        let event = EKEventData(id: "E1", title: "To Delete", startDate: baseDate, endDate: baseDate.addingTimeInterval(3600), calendarId: "cal-1", location: nil, notes: nil)
+        let event = CalendarEventData(id: "E1", title: "To Delete", startDate: baseDate, endDate: baseDate.addingTimeInterval(3600), calendarId: "cal-1", location: nil, notes: nil)
         await mock.setStubEvents([event])
 
         let service = EventKitCalendarService(adapter: mock)
@@ -335,7 +335,7 @@ struct EventKitCalendarServiceTests {
     @Test("openEvent tracks opened event")
     func testOpenEventTracksOpened() async throws {
         let mock = MockEventKitAdapter()
-        let event = EKEventData(id: "E1", title: "Test", startDate: baseDate, endDate: baseDate.addingTimeInterval(3600), calendarId: "cal-1", location: nil, notes: nil)
+        let event = CalendarEventData(id: "E1", title: "Test", startDate: baseDate, endDate: baseDate.addingTimeInterval(3600), calendarId: "cal-1", location: nil, notes: nil)
         await mock.setStubEvents([event])
 
         let service = EventKitCalendarService(adapter: mock)

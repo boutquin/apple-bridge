@@ -12,8 +12,8 @@ struct EventKitRemindersServiceTests {
     func testGetListsReturnsLists() async throws {
         let mock = MockEventKitAdapter()
         await mock.setStubReminderLists([
-            EKReminderListData(id: "L1", name: "Personal"),
-            EKReminderListData(id: "L2", name: "Work")
+            ReminderListData(id: "L1", name: "Personal"),
+            ReminderListData(id: "L2", name: "Work")
         ])
 
         let service = EventKitRemindersService(adapter: mock)
@@ -52,9 +52,9 @@ struct EventKitRemindersServiceTests {
     func testListReturnsPaginatedReminders() async throws {
         let mock = MockEventKitAdapter()
         await mock.setStubReminders([
-            EKReminderData(id: "R1", title: "Task 1", listId: "L1", isCompleted: false),
-            EKReminderData(id: "R2", title: "Task 2", listId: "L1", isCompleted: false),
-            EKReminderData(id: "R3", title: "Task 3", listId: "L2", isCompleted: false)
+            ReminderData(id: "R1", title: "Task 1", listId: "L1", isCompleted: false),
+            ReminderData(id: "R2", title: "Task 2", listId: "L1", isCompleted: false),
+            ReminderData(id: "R3", title: "Task 3", listId: "L2", isCompleted: false)
         ])
 
         let service = EventKitRemindersService(adapter: mock)
@@ -69,7 +69,7 @@ struct EventKitRemindersServiceTests {
     func testListRespectsLimit() async throws {
         let mock = MockEventKitAdapter()
         let reminders = (1...10).map { i in
-            EKReminderData(id: "R\(i)", title: "Task \(i)", listId: "L1", isCompleted: false)
+            ReminderData(id: "R\(i)", title: "Task \(i)", listId: "L1", isCompleted: false)
         }
         await mock.setStubReminders(reminders)
 
@@ -85,8 +85,8 @@ struct EventKitRemindersServiceTests {
     func testListFiltersCompleted() async throws {
         let mock = MockEventKitAdapter()
         await mock.setStubReminders([
-            EKReminderData(id: "R1", title: "Done", listId: "L1", isCompleted: true),
-            EKReminderData(id: "R2", title: "Pending", listId: "L1", isCompleted: false)
+            ReminderData(id: "R1", title: "Done", listId: "L1", isCompleted: true),
+            ReminderData(id: "R2", title: "Pending", listId: "L1", isCompleted: false)
         ])
 
         let service = EventKitRemindersService(adapter: mock)
@@ -100,8 +100,8 @@ struct EventKitRemindersServiceTests {
     func testListIncludesCompleted() async throws {
         let mock = MockEventKitAdapter()
         await mock.setStubReminders([
-            EKReminderData(id: "R1", title: "Done", listId: "L1", isCompleted: true),
-            EKReminderData(id: "R2", title: "Pending", listId: "L1", isCompleted: false)
+            ReminderData(id: "R1", title: "Done", listId: "L1", isCompleted: true),
+            ReminderData(id: "R2", title: "Pending", listId: "L1", isCompleted: false)
         ])
 
         let service = EventKitRemindersService(adapter: mock)
@@ -116,8 +116,8 @@ struct EventKitRemindersServiceTests {
     func testSearchFiltersByTitle() async throws {
         let mock = MockEventKitAdapter()
         await mock.setStubReminders([
-            EKReminderData(id: "R1", title: "Buy milk", listId: "L1", isCompleted: false),
-            EKReminderData(id: "R2", title: "Call mom", listId: "L1", isCompleted: false)
+            ReminderData(id: "R1", title: "Buy milk", listId: "L1", isCompleted: false),
+            ReminderData(id: "R2", title: "Call mom", listId: "L1", isCompleted: false)
         ])
 
         let service = EventKitRemindersService(adapter: mock)
@@ -131,8 +131,8 @@ struct EventKitRemindersServiceTests {
     func testSearchFiltersByNotes() async throws {
         let mock = MockEventKitAdapter()
         await mock.setStubReminders([
-            EKReminderData(id: "R1", title: "Task 1", listId: "L1", isCompleted: false, notes: "Important project work"),
-            EKReminderData(id: "R2", title: "Task 2", listId: "L1", isCompleted: false, notes: "Regular stuff")
+            ReminderData(id: "R1", title: "Task 1", listId: "L1", isCompleted: false, notes: "Important project work"),
+            ReminderData(id: "R2", title: "Task 2", listId: "L1", isCompleted: false, notes: "Regular stuff")
         ])
 
         let service = EventKitRemindersService(adapter: mock)
@@ -146,7 +146,7 @@ struct EventKitRemindersServiceTests {
     func testSearchIsCaseInsensitive() async throws {
         let mock = MockEventKitAdapter()
         await mock.setStubReminders([
-            EKReminderData(id: "R1", title: "BUY GROCERIES", listId: "L1", isCompleted: false)
+            ReminderData(id: "R1", title: "BUY GROCERIES", listId: "L1", isCompleted: false)
         ])
 
         let service = EventKitRemindersService(adapter: mock)
@@ -159,7 +159,7 @@ struct EventKitRemindersServiceTests {
     func testSearchRespectsLimit() async throws {
         let mock = MockEventKitAdapter()
         let reminders = (1...10).map { i in
-            EKReminderData(id: "R\(i)", title: "Buy item \(i)", listId: "L1", isCompleted: false)
+            ReminderData(id: "R\(i)", title: "Buy item \(i)", listId: "L1", isCompleted: false)
         }
         await mock.setStubReminders(reminders)
 
@@ -216,7 +216,7 @@ struct EventKitRemindersServiceTests {
     func testUpdateReturnsUpdated() async throws {
         let mock = MockEventKitAdapter()
         await mock.setStubReminders([
-            EKReminderData(id: "R1", title: "Original", listId: "L1", isCompleted: false)
+            ReminderData(id: "R1", title: "Original", listId: "L1", isCompleted: false)
         ])
 
         let service = EventKitRemindersService(adapter: mock)
@@ -242,7 +242,7 @@ struct EventKitRemindersServiceTests {
     func testUpdatePreservesUnchangedFields() async throws {
         let mock = MockEventKitAdapter()
         await mock.setStubReminders([
-            EKReminderData(id: "R1", title: "Original", listId: "L1", isCompleted: false, notes: "Keep this", priority: 5)
+            ReminderData(id: "R1", title: "Original", listId: "L1", isCompleted: false, notes: "Keep this", priority: 5)
         ])
 
         let service = EventKitRemindersService(adapter: mock)
@@ -260,7 +260,7 @@ struct EventKitRemindersServiceTests {
     func testDeleteRemovesReminder() async throws {
         let mock = MockEventKitAdapter()
         await mock.setStubReminders([
-            EKReminderData(id: "R1", title: "To Delete", listId: "L1", isCompleted: false)
+            ReminderData(id: "R1", title: "To Delete", listId: "L1", isCompleted: false)
         ])
 
         let service = EventKitRemindersService(adapter: mock)
@@ -287,7 +287,7 @@ struct EventKitRemindersServiceTests {
     func testCompleteMarksCompleted() async throws {
         let mock = MockEventKitAdapter()
         await mock.setStubReminders([
-            EKReminderData(id: "R1", title: "Task", listId: "L1", isCompleted: false)
+            ReminderData(id: "R1", title: "Task", listId: "L1", isCompleted: false)
         ])
 
         let service = EventKitRemindersService(adapter: mock)
@@ -311,7 +311,7 @@ struct EventKitRemindersServiceTests {
     func testCompletePreservesOtherFields() async throws {
         let mock = MockEventKitAdapter()
         await mock.setStubReminders([
-            EKReminderData(id: "R1", title: "Important Task", listId: "L1", isCompleted: false, notes: "Details here", priority: 1)
+            ReminderData(id: "R1", title: "Important Task", listId: "L1", isCompleted: false, notes: "Details here", priority: 1)
         ])
 
         let service = EventKitRemindersService(adapter: mock)
@@ -329,7 +329,7 @@ struct EventKitRemindersServiceTests {
     func testOpenTracksOpened() async throws {
         let mock = MockEventKitAdapter()
         await mock.setStubReminders([
-            EKReminderData(id: "R1", title: "Task", listId: "L1", isCompleted: false)
+            ReminderData(id: "R1", title: "Task", listId: "L1", isCompleted: false)
         ])
 
         let service = EventKitRemindersService(adapter: mock)

@@ -4,7 +4,7 @@ import Core
 /// Implementation of `CalendarService` using EventKit via an adapter.
 ///
 /// This service translates between the high-level `CalendarService` protocol
-/// (using ISO 8601 string dates) and the lower-level `EventKitAdapterProtocol`
+/// (using ISO 8601 string dates) and the lower-level `CalendarAdapterProtocol`
 /// (using Foundation `Date` objects).
 ///
 /// ## Example
@@ -15,8 +15,8 @@ import Core
 /// ```
 public struct EventKitCalendarService: CalendarService, Sendable {
 
-    /// The adapter used to interact with EventKit.
-    private let adapter: any EventKitAdapterProtocol
+    /// The adapter used to interact with calendar backend.
+    private let adapter: any CalendarAdapterProtocol
 
     /// Default range start: 1 year ago.
     private static let defaultFromOffset: TimeInterval = -365 * 24 * 60 * 60
@@ -25,8 +25,8 @@ public struct EventKitCalendarService: CalendarService, Sendable {
     private static let defaultToOffset: TimeInterval = 365 * 24 * 60 * 60
 
     /// Creates a new calendar service with the given adapter.
-    /// - Parameter adapter: The EventKit adapter to use for calendar operations.
-    public init(adapter: any EventKitAdapterProtocol) {
+    /// - Parameter adapter: The calendar adapter to use for calendar operations.
+    public init(adapter: any CalendarAdapterProtocol) {
         self.adapter = adapter
     }
 
@@ -134,8 +134,8 @@ public struct EventKitCalendarService: CalendarService, Sendable {
 
     // MARK: - Private Helpers
 
-    /// Converts an `EKEventData` to a `CalendarEvent`.
-    private func convertToCalendarEvent(_ event: EKEventData) -> CalendarEvent {
+    /// Converts a `CalendarEventData` to a `CalendarEvent`.
+    private func convertToCalendarEvent(_ event: CalendarEventData) -> CalendarEvent {
         CalendarEvent(
             id: event.id,
             title: event.title,

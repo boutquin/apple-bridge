@@ -3,12 +3,12 @@ import Foundation
 @testable import Adapters
 @testable import Core
 
-@Suite("EventKitAdapter Protocol Tests")
+@Suite("CalendarAdapter Protocol Tests")
 struct EventKitAdapterTests {
 
     // MARK: - Protocol Existence
 
-    @Test("EventKitAdapterProtocol exists and is Sendable")
+    @Test("CalendarAdapterProtocol exists and is Sendable")
     func testProtocolExistsAndIsSendable() async {
         // Verify the protocol exists by creating a mock
         let mock = MockEventKitAdapter()
@@ -41,7 +41,7 @@ struct EventKitAdapterTests {
         let mock = MockEventKitAdapter()
         let baseDate = Date(timeIntervalSince1970: 1706400000) // Fixed date for testing
         let testEvents = [
-            EKEventData(
+            CalendarEventData(
                 id: "E1",
                 title: "Meeting",
                 startDate: baseDate.addingTimeInterval(3600), // 1 hour after base
@@ -66,7 +66,7 @@ struct EventKitAdapterTests {
     @Test("fetchEvent retrieves single event by ID")
     func testFetchEvent() async throws {
         let mock = MockEventKitAdapter()
-        let testEvent = EKEventData(
+        let testEvent = CalendarEventData(
             id: "E1",
             title: "Test Event",
             startDate: Date(),
@@ -115,7 +115,7 @@ struct EventKitAdapterTests {
     @Test("updateEvent modifies existing event")
     func testUpdateEvent() async throws {
         let mock = MockEventKitAdapter()
-        let testEvent = EKEventData(
+        let testEvent = CalendarEventData(
             id: "E1",
             title: "Original",
             startDate: Date(),
@@ -142,7 +142,7 @@ struct EventKitAdapterTests {
     @Test("deleteEvent removes event")
     func testDeleteEvent() async throws {
         let mock = MockEventKitAdapter()
-        let testEvent = EKEventData(
+        let testEvent = CalendarEventData(
             id: "E1",
             title: "To Delete",
             startDate: Date(),
@@ -162,7 +162,7 @@ struct EventKitAdapterTests {
     @Test("openEvent opens in Calendar app")
     func testOpenEvent() async throws {
         let mock = MockEventKitAdapter()
-        let testEvent = EKEventData(
+        let testEvent = CalendarEventData(
             id: "E1",
             title: "Test",
             startDate: Date(),
@@ -185,8 +185,8 @@ struct EventKitAdapterTests {
     func testFetchCalendars() async throws {
         let mock = MockEventKitAdapter()
         let calendars = [
-            EKCalendarData(id: "cal-1", title: "Work", isWritable: true),
-            EKCalendarData(id: "cal-2", title: "Personal", isWritable: true)
+            CalendarData(id: "cal-1", title: "Work", isWritable: true),
+            CalendarData(id: "cal-2", title: "Personal", isWritable: true)
         ]
         await mock.setStubCalendars(calendars)
 

@@ -2,11 +2,11 @@ import Foundation
 import Core
 import Adapters
 
-/// Mock implementation of `EventKitAdapterProtocol` for testing.
+/// Mock implementation of `CalendarAdapterProtocol` for testing.
 ///
 /// Provides stubbed data and tracks method calls for verification in tests.
 /// All methods are actor-isolated for thread safety.
-public actor MockEventKitAdapter: EventKitAdapterProtocol {
+public actor MockEventKitAdapter: CalendarAdapterProtocol {
 
     // MARK: - Calendar Stub Data
 
@@ -14,10 +14,10 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
     private var calendarAccessGranted: Bool = true
 
     /// Stubbed events to return from fetch operations.
-    private var stubEvents: [EKEventData] = []
+    private var stubEvents: [CalendarEventData] = []
 
     /// Stubbed calendars to return from fetch operations.
-    private var stubCalendars: [EKCalendarData] = []
+    private var stubCalendars: [CalendarData] = []
 
     /// Default calendar identifier.
     private var defaultCalendar: String = "default-calendar"
@@ -28,7 +28,7 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
     // MARK: - Calendar Tracking
 
     /// Tracks events that have been created.
-    private var createdEvents: [EKEventData] = []
+    private var createdEvents: [CalendarEventData] = []
 
     /// Tracks IDs of events that have been deleted.
     private var deletedEventIds: [String] = []
@@ -42,10 +42,10 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
     private var remindersAccessGranted: Bool = true
 
     /// Stubbed reminders to return from fetch operations.
-    private var stubReminders: [EKReminderData] = []
+    private var stubReminders: [ReminderData] = []
 
     /// Stubbed reminder lists to return from fetch operations.
-    private var stubReminderLists: [EKReminderListData] = []
+    private var stubReminderLists: [ReminderListData] = []
 
     /// Default reminder list identifier.
     private var defaultReminderList: String = "default-list"
@@ -53,7 +53,7 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
     // MARK: - Reminders Tracking
 
     /// Tracks reminders that have been created.
-    private var createdReminders: [EKReminderData] = []
+    private var createdReminders: [ReminderData] = []
 
     /// Tracks IDs of reminders that have been deleted.
     private var deletedReminderIds: [String] = []
@@ -74,12 +74,12 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
     }
 
     /// Sets stubbed events for testing.
-    public func setStubEvents(_ events: [EKEventData]) {
+    public func setStubEvents(_ events: [CalendarEventData]) {
         self.stubEvents = events
     }
 
     /// Sets stubbed calendars for testing.
-    public func setStubCalendars(_ calendars: [EKCalendarData]) {
+    public func setStubCalendars(_ calendars: [CalendarData]) {
         self.stubCalendars = calendars
     }
 
@@ -96,7 +96,7 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
     // MARK: - Verification Methods
 
     /// Gets the list of created events for verification.
-    public func getCreatedEvents() -> [EKEventData] {
+    public func getCreatedEvents() -> [CalendarEventData] {
         return createdEvents
     }
 
@@ -118,12 +118,12 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
     }
 
     /// Sets stubbed reminders for testing.
-    public func setStubReminders(_ reminders: [EKReminderData]) {
+    public func setStubReminders(_ reminders: [ReminderData]) {
         self.stubReminders = reminders
     }
 
     /// Sets stubbed reminder lists for testing.
-    public func setStubReminderLists(_ lists: [EKReminderListData]) {
+    public func setStubReminderLists(_ lists: [ReminderListData]) {
         self.stubReminderLists = lists
     }
 
@@ -135,7 +135,7 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
     // MARK: - Reminders Verification Methods
 
     /// Gets the list of created reminders for verification.
-    public func getCreatedReminders() -> [EKReminderData] {
+    public func getCreatedReminders() -> [ReminderData] {
         return createdReminders
     }
 
@@ -149,14 +149,14 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
         return openedReminderIds
     }
 
-    // MARK: - EventKitAdapterProtocol (Calendar)
+    // MARK: - CalendarAdapterProtocol (Calendar)
 
     public func requestCalendarAccess() async throws -> Bool {
         if let error = errorToThrow { throw error }
         return calendarAccessGranted
     }
 
-    public func fetchCalendars() async throws -> [EKCalendarData] {
+    public func fetchCalendars() async throws -> [CalendarData] {
         if let error = errorToThrow { throw error }
         return stubCalendars
     }
@@ -166,7 +166,7 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
         return defaultCalendar
     }
 
-    public func fetchEvents(from: Date, to: Date, calendarId: String?) async throws -> [EKEventData] {
+    public func fetchEvents(from: Date, to: Date, calendarId: String?) async throws -> [CalendarEventData] {
         if let error = errorToThrow { throw error }
 
         // Filter by date range and optionally by calendar
@@ -177,7 +177,7 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
         }
     }
 
-    public func fetchEvent(id: String) async throws -> EKEventData {
+    public func fetchEvent(id: String) async throws -> CalendarEventData {
         if let error = errorToThrow { throw error }
 
         guard let event = stubEvents.first(where: { $0.id == id }) else {
@@ -198,7 +198,7 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
         if let error = errorToThrow { throw error }
 
         let id = UUID().uuidString
-        let event = EKEventData(
+        let event = CalendarEventData(
             id: id,
             title: title,
             startDate: startDate,
@@ -221,7 +221,7 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
         endDate: Date?,
         location: String?,
         notes: String?
-    ) async throws -> EKEventData {
+    ) async throws -> CalendarEventData {
         if let error = errorToThrow { throw error }
 
         guard let index = stubEvents.firstIndex(where: { $0.id == id }) else {
@@ -231,7 +231,7 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
         let existing = stubEvents[index]
 
         // Apply updates (non-nil values override existing)
-        let updated = EKEventData(
+        let updated = CalendarEventData(
             id: existing.id,
             title: title ?? existing.title,
             startDate: startDate ?? existing.startDate,
@@ -266,14 +266,14 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
         openedEventIds.append(id)
     }
 
-    // MARK: - EventKitAdapterProtocol (Reminders)
+    // MARK: - CalendarAdapterProtocol (Reminders)
 
     public func requestRemindersAccess() async throws -> Bool {
         if let error = errorToThrow { throw error }
         return remindersAccessGranted
     }
 
-    public func fetchReminderLists() async throws -> [EKReminderListData] {
+    public func fetchReminderLists() async throws -> [ReminderListData] {
         if let error = errorToThrow { throw error }
         return stubReminderLists
     }
@@ -283,7 +283,7 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
         return defaultReminderList
     }
 
-    public func fetchReminders(listId: String?, includeCompleted: Bool) async throws -> [EKReminderData] {
+    public func fetchReminders(listId: String?, includeCompleted: Bool) async throws -> [ReminderData] {
         if let error = errorToThrow { throw error }
 
         // Filter by list if specified
@@ -300,7 +300,7 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
         return filtered
     }
 
-    public func fetchReminder(id: String) async throws -> EKReminderData {
+    public func fetchReminder(id: String) async throws -> ReminderData {
         if let error = errorToThrow { throw error }
 
         guard let reminder = stubReminders.first(where: { $0.id == id }) else {
@@ -320,7 +320,7 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
         if let error = errorToThrow { throw error }
 
         let id = UUID().uuidString
-        let reminder = EKReminderData(
+        let reminder = ReminderData(
             id: id,
             title: title,
             listId: listId ?? defaultReminderList,
@@ -343,7 +343,7 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
         notes: String?,
         listId: String?,
         priority: Int?
-    ) async throws -> EKReminderData {
+    ) async throws -> ReminderData {
         if let error = errorToThrow { throw error }
 
         guard let index = stubReminders.firstIndex(where: { $0.id == id }) else {
@@ -353,7 +353,7 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
         let existing = stubReminders[index]
 
         // Apply updates (non-nil values override existing)
-        let updated = EKReminderData(
+        let updated = ReminderData(
             id: existing.id,
             title: title ?? existing.title,
             listId: listId ?? existing.listId,
@@ -378,7 +378,7 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
         deletedReminderIds.append(id)
     }
 
-    public func completeReminder(id: String) async throws -> EKReminderData {
+    public func completeReminder(id: String) async throws -> ReminderData {
         if let error = errorToThrow { throw error }
 
         guard let index = stubReminders.firstIndex(where: { $0.id == id }) else {
@@ -388,7 +388,7 @@ public actor MockEventKitAdapter: EventKitAdapterProtocol {
         let existing = stubReminders[index]
 
         // Mark as completed
-        let completed = EKReminderData(
+        let completed = ReminderData(
             id: existing.id,
             title: existing.title,
             listId: existing.listId,

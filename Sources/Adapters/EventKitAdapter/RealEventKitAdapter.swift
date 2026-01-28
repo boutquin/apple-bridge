@@ -9,7 +9,7 @@ import EventKit
 import AppKit
 #endif
 
-/// Real implementation of `EventKitAdapterProtocol` using the EventKit framework.
+/// Real implementation of `CalendarAdapterProtocol` using the EventKit framework.
 ///
 /// This adapter provides actual access to the user's calendar and reminders
 /// through Apple's EventKit framework.
@@ -25,7 +25,7 @@ import AppKit
 /// ## Requirements
 /// - macOS 10.15+ (uses modern async/await APIs)
 /// - Calendar and Reminders permissions must be granted by the user
-public actor RealEventKitAdapter: EventKitAdapterProtocol {
+public actor RealEventKitAdapter: CalendarAdapterProtocol {
 
     #if canImport(EventKit)
     /// Shared event store for calendar and reminders access.
@@ -53,11 +53,11 @@ public actor RealEventKitAdapter: EventKitAdapterProtocol {
 
     // MARK: - Calendar Operations
 
-    public func fetchCalendars() async throws -> [EKCalendarData] {
+    public func fetchCalendars() async throws -> [CalendarData] {
         #if canImport(EventKit)
         let calendars = eventStore.calendars(for: .event)
         return calendars.map { cal in
-            EKCalendarData(
+            CalendarData(
                 id: cal.calendarIdentifier,
                 title: cal.title,
                 isWritable: cal.allowsContentModifications
@@ -79,7 +79,7 @@ public actor RealEventKitAdapter: EventKitAdapterProtocol {
         #endif
     }
 
-    public func fetchEvents(from: Date, to: Date, calendarId: String?) async throws -> [EKEventData] {
+    public func fetchEvents(from: Date, to: Date, calendarId: String?) async throws -> [CalendarEventData] {
         #if canImport(EventKit)
         let calendars: [EKCalendar]?
         if let calId = calendarId {
@@ -96,7 +96,7 @@ public actor RealEventKitAdapter: EventKitAdapterProtocol {
         let events = eventStore.events(matching: predicate)
 
         return events.map { event in
-            EKEventData(
+            CalendarEventData(
                 id: event.eventIdentifier,
                 title: event.title ?? "",
                 startDate: event.startDate,
@@ -111,12 +111,12 @@ public actor RealEventKitAdapter: EventKitAdapterProtocol {
         #endif
     }
 
-    public func fetchEvent(id: String) async throws -> EKEventData {
+    public func fetchEvent(id: String) async throws -> CalendarEventData {
         #if canImport(EventKit)
         guard let event = eventStore.event(withIdentifier: id) else {
             throw ValidationError.notFound(resource: "event", id: id)
         }
-        return EKEventData(
+        return CalendarEventData(
             id: event.eventIdentifier,
             title: event.title ?? "",
             startDate: event.startDate,
@@ -170,7 +170,7 @@ public actor RealEventKitAdapter: EventKitAdapterProtocol {
         endDate: Date?,
         location: String?,
         notes: String?
-    ) async throws -> EKEventData {
+    ) async throws -> CalendarEventData {
         #if canImport(EventKit)
         guard let event = eventStore.event(withIdentifier: id) else {
             throw ValidationError.notFound(resource: "event", id: id)
@@ -184,7 +184,7 @@ public actor RealEventKitAdapter: EventKitAdapterProtocol {
 
         try eventStore.save(event, span: .thisEvent)
 
-        return EKEventData(
+        return CalendarEventData(
             id: event.eventIdentifier,
             title: event.title ?? "",
             startDate: event.startDate,
@@ -240,11 +240,11 @@ public actor RealEventKitAdapter: EventKitAdapterProtocol {
 
     // MARK: - Reminder List Operations
 
-    public func fetchReminderLists() async throws -> [EKReminderListData] {
+    public func fetchReminderLists() async throws -> [ReminderListData] {
         #if canImport(EventKit)
         let calendars = eventStore.calendars(for: .reminder)
         return calendars.map { cal in
-            EKReminderListData(id: cal.calendarIdentifier, name: cal.title)
+            ReminderListData(id: cal.calendarIdentifier, name: cal.title)
         }
         #else
         throw PermissionError.remindersDenied
@@ -264,7 +264,7 @@ public actor RealEventKitAdapter: EventKitAdapterProtocol {
 
     // MARK: - Reminder Operations
 
-    public func fetchReminders(listId: String?, includeCompleted: Bool) async throws -> [EKReminderData] {
+    public func fetchReminders(listId: String?, includeCompleted: Bool) async throws -> [ReminderData] {
         #if canImport(EventKit)
         let calendars: [EKCalendar]?
         if let listId = listId {
@@ -289,7 +289,7 @@ public actor RealEventKitAdapter: EventKitAdapterProtocol {
                 let filtered = includeCompleted ? reminders : reminders.filter { !$0.isCompleted }
 
                 let data = filtered.map { reminder in
-                    EKReminderData(
+                    ReminderData(
                         id: reminder.calendarItemIdentifier,
                         title: reminder.title ?? "",
                         listId: reminder.calendar.calendarIdentifier,
@@ -307,12 +307,12 @@ public actor RealEventKitAdapter: EventKitAdapterProtocol {
         #endif
     }
 
-    public func fetchReminder(id: String) async throws -> EKReminderData {
+    public func fetchReminder(id: String) async throws -> ReminderData {
         #if canImport(EventKit)
         guard let item = eventStore.calendarItem(withIdentifier: id) as? EKReminder else {
             throw ValidationError.notFound(resource: "reminder", id: id)
         }
-        return EKReminderData(
+        return ReminderData(
             id: item.calendarItemIdentifier,
             title: item.title ?? "",
             listId: item.calendar.calendarIdentifier,
@@ -372,7 +372,7 @@ public actor RealEventKitAdapter: EventKitAdapterProtocol {
         notes: String?,
         listId: String?,
         priority: Int?
-    ) async throws -> EKReminderData {
+    ) async throws -> ReminderData {
         #if canImport(EventKit)
         guard let reminder = eventStore.calendarItem(withIdentifier: id) as? EKReminder else {
             throw ValidationError.notFound(resource: "reminder", id: id)
@@ -399,7 +399,7 @@ public actor RealEventKitAdapter: EventKitAdapterProtocol {
 
         try eventStore.save(reminder, commit: true)
 
-        return EKReminderData(
+        return ReminderData(
             id: reminder.calendarItemIdentifier,
             title: reminder.title ?? "",
             listId: reminder.calendar.calendarIdentifier,
@@ -424,7 +424,7 @@ public actor RealEventKitAdapter: EventKitAdapterProtocol {
         #endif
     }
 
-    public func completeReminder(id: String) async throws -> EKReminderData {
+    public func completeReminder(id: String) async throws -> ReminderData {
         #if canImport(EventKit)
         guard let reminder = eventStore.calendarItem(withIdentifier: id) as? EKReminder else {
             throw ValidationError.notFound(resource: "reminder", id: id)
@@ -432,7 +432,7 @@ public actor RealEventKitAdapter: EventKitAdapterProtocol {
         reminder.isCompleted = true
         try eventStore.save(reminder, commit: true)
 
-        return EKReminderData(
+        return ReminderData(
             id: reminder.calendarItemIdentifier,
             title: reminder.title ?? "",
             listId: reminder.calendar.calendarIdentifier,

@@ -3,12 +3,13 @@ import Core
 
 // MARK: - Calendar Data Transfer Objects
 
-/// Lightweight data representation of an EventKit event.
+/// Lightweight data representation of a calendar event.
 ///
 /// This struct provides a Sendable, Codable representation of calendar events
 /// that can be safely passed across actor boundaries without requiring direct
-/// EventKit framework access.
-public struct EKEventData: Sendable, Equatable {
+/// framework access. Used as the boundary type between adapter implementations
+/// (EventKit, AppleScript, etc.) and the service layer.
+public struct CalendarEventData: Sendable, Equatable {
     /// Unique identifier for the event.
     public let id: String
 
@@ -50,11 +51,12 @@ public struct EKEventData: Sendable, Equatable {
     }
 }
 
-/// Lightweight data representation of an EventKit calendar.
+/// Lightweight data representation of a calendar.
 ///
 /// This struct provides a Sendable representation of calendars that can be
-/// safely passed across actor boundaries.
-public struct EKCalendarData: Sendable, Equatable {
+/// safely passed across actor boundaries. Used as the boundary type between
+/// adapter implementations and the service layer.
+public struct CalendarData: Sendable, Equatable {
     /// Unique identifier for the calendar.
     public let id: String
 
@@ -74,12 +76,13 @@ public struct EKCalendarData: Sendable, Equatable {
 
 // MARK: - Reminders Data Transfer Objects
 
-/// Lightweight data representation of an EventKit reminder.
+/// Lightweight data representation of a reminder.
 ///
 /// This struct provides a Sendable, Codable representation of reminders
 /// that can be safely passed across actor boundaries without requiring direct
-/// EventKit framework access.
-public struct EKReminderData: Sendable, Equatable {
+/// framework access. Used as the boundary type between adapter implementations
+/// (EventKit, AppleScript, etc.) and the service layer.
+public struct ReminderData: Sendable, Equatable {
     /// Unique identifier for the reminder.
     public let id: String
 
@@ -121,11 +124,12 @@ public struct EKReminderData: Sendable, Equatable {
     }
 }
 
-/// Lightweight data representation of an EventKit reminder list.
+/// Lightweight data representation of a reminder list.
 ///
 /// This struct provides a Sendable representation of reminder lists that can be
-/// safely passed across actor boundaries.
-public struct EKReminderListData: Sendable, Equatable {
+/// safely passed across actor boundaries. Used as the boundary type between
+/// adapter implementations and the service layer.
+public struct ReminderListData: Sendable, Equatable {
     /// Unique identifier for the list.
     public let id: String
 
@@ -141,25 +145,27 @@ public struct EKReminderListData: Sendable, Equatable {
 
 // MARK: - Protocol
 
-/// Protocol for interacting with EventKit for calendar operations.
+/// Protocol for interacting with Apple Calendar and Reminders.
 ///
-/// This protocol abstracts EventKit operations to enable testing with mock implementations.
+/// This protocol abstracts calendar and reminders operations to enable testing with mock
+/// implementations and to support multiple backend implementations (EventKit, AppleScript, etc.).
 /// All implementations must be `Sendable` for safe use across actor boundaries.
 ///
 /// ## Implementation Notes
-/// - Real implementations use EKEventStore for calendar access
+/// - EventKit implementation uses EKEventStore for calendar access
+/// - AppleScript implementation uses osascript for calendar access
 /// - Date parameters use Foundation `Date` to preserve timezone information
-/// - The protocol uses data transfer objects (EKEventData, EKCalendarData) instead of
-///   EKEvent/EKCalendar directly to enable Sendable conformance
+/// - The protocol uses generic data transfer objects (CalendarEventData, CalendarData) to
+///   decouple from specific framework types
 ///
 /// ## Example
 /// ```swift
-/// let adapter: EventKitAdapterProtocol = RealEventKitAdapter()
+/// let adapter: CalendarAdapterProtocol = RealEventKitAdapter()
 /// if try await adapter.requestCalendarAccess() {
 ///     let events = try await adapter.fetchEvents(from: Date(), to: Date().addingTimeInterval(86400), calendarId: nil)
 /// }
 /// ```
-public protocol EventKitAdapterProtocol: Sendable {
+public protocol CalendarAdapterProtocol: Sendable {
 
     // MARK: - Authorization
 
@@ -173,7 +179,7 @@ public protocol EventKitAdapterProtocol: Sendable {
     /// Fetches all available calendars.
     /// - Returns: Array of calendar data objects.
     /// - Throws: `PermissionError.calendarDenied` if calendar access is not granted.
-    func fetchCalendars() async throws -> [EKCalendarData]
+    func fetchCalendars() async throws -> [CalendarData]
 
     /// Returns the identifier of the default calendar for new events.
     /// - Returns: The default calendar identifier.
@@ -189,13 +195,13 @@ public protocol EventKitAdapterProtocol: Sendable {
     ///   - calendarId: Optional calendar filter (nil = all calendars).
     /// - Returns: Array of events within the range.
     /// - Throws: `PermissionError.calendarDenied` if calendar access is not granted.
-    func fetchEvents(from: Date, to: Date, calendarId: String?) async throws -> [EKEventData]
+    func fetchEvents(from: Date, to: Date, calendarId: String?) async throws -> [CalendarEventData]
 
     /// Fetches a single event by identifier.
     /// - Parameter id: The event identifier.
     /// - Returns: The event data.
     /// - Throws: `ValidationError.notFound` if the event doesn't exist.
-    func fetchEvent(id: String) async throws -> EKEventData
+    func fetchEvent(id: String) async throws -> CalendarEventData
 
     /// Creates a new calendar event.
     /// - Parameters:
@@ -233,7 +239,7 @@ public protocol EventKitAdapterProtocol: Sendable {
         endDate: Date?,
         location: String?,
         notes: String?
-    ) async throws -> EKEventData
+    ) async throws -> CalendarEventData
 
     /// Deletes a calendar event.
     /// - Parameter id: Event identifier.
@@ -257,7 +263,7 @@ public protocol EventKitAdapterProtocol: Sendable {
     /// Fetches all reminder lists.
     /// - Returns: Array of reminder list data objects.
     /// - Throws: `PermissionError.remindersDenied` if reminders access is not granted.
-    func fetchReminderLists() async throws -> [EKReminderListData]
+    func fetchReminderLists() async throws -> [ReminderListData]
 
     /// Returns the identifier of the default reminder list.
     /// - Returns: The default list identifier.
@@ -272,13 +278,13 @@ public protocol EventKitAdapterProtocol: Sendable {
     ///   - includeCompleted: Whether to include completed reminders.
     /// - Returns: Array of reminders.
     /// - Throws: `PermissionError.remindersDenied` if reminders access is not granted.
-    func fetchReminders(listId: String?, includeCompleted: Bool) async throws -> [EKReminderData]
+    func fetchReminders(listId: String?, includeCompleted: Bool) async throws -> [ReminderData]
 
     /// Fetches a single reminder by identifier.
     /// - Parameter id: The reminder identifier.
     /// - Returns: The reminder data.
     /// - Throws: `ValidationError.notFound` if the reminder doesn't exist.
-    func fetchReminder(id: String) async throws -> EKReminderData
+    func fetchReminder(id: String) async throws -> ReminderData
 
     /// Creates a new reminder.
     /// - Parameters:
@@ -314,7 +320,7 @@ public protocol EventKitAdapterProtocol: Sendable {
         notes: String?,
         listId: String?,
         priority: Int?
-    ) async throws -> EKReminderData
+    ) async throws -> ReminderData
 
     /// Deletes a reminder.
     /// - Parameter id: Reminder identifier.
@@ -325,7 +331,7 @@ public protocol EventKitAdapterProtocol: Sendable {
     /// - Parameter id: Reminder identifier.
     /// - Returns: The completed reminder data.
     /// - Throws: `ValidationError.notFound` if the reminder doesn't exist.
-    func completeReminder(id: String) async throws -> EKReminderData
+    func completeReminder(id: String) async throws -> ReminderData
 
     /// Opens a reminder in the Reminders app.
     /// - Parameter id: Reminder identifier.

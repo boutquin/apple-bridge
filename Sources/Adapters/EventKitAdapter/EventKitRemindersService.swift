@@ -4,7 +4,7 @@ import Core
 /// Implementation of `RemindersService` using EventKit via an adapter.
 ///
 /// This service translates between the high-level `RemindersService` protocol
-/// (using ISO 8601 string dates) and the lower-level `EventKitAdapterProtocol`
+/// (using ISO 8601 string dates) and the lower-level `CalendarAdapterProtocol`
 /// (using Foundation `Date` objects).
 ///
 /// ## Example
@@ -15,12 +15,12 @@ import Core
 /// ```
 public struct EventKitRemindersService: RemindersService, Sendable {
 
-    /// The adapter used to interact with EventKit.
-    private let adapter: any EventKitAdapterProtocol
+    /// The adapter used to interact with reminders backend.
+    private let adapter: any CalendarAdapterProtocol
 
     /// Creates a new reminders service with the given adapter.
-    /// - Parameter adapter: The EventKit adapter to use for reminder operations.
-    public init(adapter: any EventKitAdapterProtocol) {
+    /// - Parameter adapter: The calendar adapter to use for reminder operations.
+    public init(adapter: any CalendarAdapterProtocol) {
         self.adapter = adapter
     }
 
@@ -160,8 +160,8 @@ public struct EventKitRemindersService: RemindersService, Sendable {
 
     // MARK: - Private Helpers
 
-    /// Converts an `EKReminderData` to a `Reminder`.
-    private func convertToReminder(_ reminder: EKReminderData) -> Reminder {
+    /// Converts a `ReminderData` to a `Reminder`.
+    private func convertToReminder(_ reminder: ReminderData) -> Reminder {
         Reminder(
             id: reminder.id,
             title: reminder.title,
