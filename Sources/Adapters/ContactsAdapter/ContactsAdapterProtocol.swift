@@ -8,7 +8,7 @@ import Core
 /// This struct provides a Sendable, Codable representation of contacts
 /// that can be safely passed across actor boundaries without requiring direct
 /// Contacts framework access.
-public struct CNContactData: Sendable, Equatable {
+public struct CNContactData: Sendable, Equatable, Codable {
     /// Unique identifier for the contact.
     public let id: String
 

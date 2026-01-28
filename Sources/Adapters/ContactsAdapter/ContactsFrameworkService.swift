@@ -25,16 +25,29 @@ public struct ContactsFrameworkService: ContactsService, Sendable {
 
     // MARK: - ContactsService Protocol
 
+    /// Searches contacts matching a query string.
+    /// - Parameters:
+    ///   - query: Text to search in contact names, emails, and phones.
+    ///   - limit: Maximum number of results to return.
+    /// - Returns: Array of matching contacts.
+    /// - Throws: `PermissionError.contactsDenied` if contacts access is not granted.
     public func search(query: String, limit: Int) async throws -> [Contact] {
         let contacts = try await adapter.fetchContacts(query: query, limit: limit)
         return contacts.map(convertToContact)
     }
 
+    /// Retrieves a contact by identifier.
+    /// - Parameter id: The contact identifier.
+    /// - Returns: The contact with the given ID.
+    /// - Throws: `ValidationError.notFound` if the contact doesn't exist.
     public func get(id: String) async throws -> Contact {
         let contact = try await adapter.fetchContact(id: id)
         return convertToContact(contact)
     }
 
+    /// Retrieves the user's own contact card (Me card).
+    /// - Returns: The user's contact, or `nil` if not configured in Contacts.
+    /// - Throws: `PermissionError.contactsDenied` if contacts access is not granted.
     public func me() async throws -> Contact? {
         guard let contact = try await adapter.fetchMeContact() else {
             return nil
@@ -42,6 +55,9 @@ public struct ContactsFrameworkService: ContactsService, Sendable {
         return convertToContact(contact)
     }
 
+    /// Opens a contact in the Contacts app.
+    /// - Parameter id: The contact identifier.
+    /// - Throws: `ValidationError.notFound` if the contact doesn't exist.
     public func open(id: String) async throws {
         try await adapter.openContact(id: id)
     }
