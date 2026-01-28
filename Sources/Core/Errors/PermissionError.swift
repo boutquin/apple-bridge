@@ -29,8 +29,9 @@ public enum PermissionError: Error, Sendable {
     /// Contacts access was denied by the user.
     case contactsDenied
 
-    /// Full Disk Access was denied (required for Messages/Mail databases).
-    case fullDiskAccessDenied
+    /// Full Disk Access was denied (required for Notes/Messages databases).
+    /// The optional context describes which feature requires FDA (e.g., "Notes", "Messages").
+    case fullDiskAccessDenied(context: String? = nil)
 
     /// Automation (AppleScript) access was denied for a specific app.
     case automationDenied(app: String)
@@ -44,8 +45,12 @@ public enum PermissionError: Error, Sendable {
             return "Reminders access denied. Please grant access in System Settings > Privacy & Security > Reminders."
         case .contactsDenied:
             return "Contacts access denied. Please grant access in System Settings > Privacy & Security > Contacts."
-        case .fullDiskAccessDenied:
-            return "Full Disk Access denied. Please grant access in System Settings > Privacy & Security > Full Disk Access."
+        case .fullDiskAccessDenied(let context):
+            if let context = context {
+                return "Full Disk Access required to read \(context) database. Please grant access in System Settings > Privacy & Security > Full Disk Access."
+            } else {
+                return "Full Disk Access denied. Please grant access in System Settings > Privacy & Security > Full Disk Access."
+            }
         case .automationDenied(let app):
             return "Automation access denied for \(app). Please grant access in System Settings > Privacy & Security > Automation."
         }

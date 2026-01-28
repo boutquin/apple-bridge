@@ -18,7 +18,13 @@ let package = Package(
             ]
         ),
         .target(name: "Core"),
-        .target(name: "Adapters", dependencies: ["Core"]),
+        .target(
+            name: "Adapters",
+            dependencies: ["Core"],
+            linkerSettings: [
+                .linkedLibrary("sqlite3")
+            ]
+        ),
         .target(name: "MCPServer", dependencies: ["Core", "Adapters", .product(name: "MCP", package: "swift-sdk")]),
         .target(
             name: "TestUtilities",
@@ -26,7 +32,13 @@ let package = Package(
             path: "Tests/TestUtilities"
         ),
         .testTarget(name: "CoreTests", dependencies: ["Core", "TestUtilities"]),
-        .testTarget(name: "AdapterTests", dependencies: ["Adapters", "TestUtilities"]),
+        .testTarget(
+            name: "AdapterTests",
+            dependencies: ["Adapters", "TestUtilities"],
+            resources: [
+                .copy("Fixtures")
+            ]
+        ),
         .testTarget(name: "MCPServerTests", dependencies: ["MCPServer", "TestUtilities"]),
         .testTarget(name: "E2ETests", dependencies: ["apple-bridge"])
     ]

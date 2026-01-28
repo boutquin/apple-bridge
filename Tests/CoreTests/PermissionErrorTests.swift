@@ -23,8 +23,15 @@ struct PermissionErrorTests {
     }
 
     @Test func testFullDiskAccessDeniedMessage() {
-        let error = PermissionError.fullDiskAccessDenied
+        let error = PermissionError.fullDiskAccessDenied()
         #expect(error.userMessage.contains("Full Disk Access"))
+        #expect(error.userMessage.contains("System Settings"))
+    }
+
+    @Test func testFullDiskAccessDeniedWithContextMessage() {
+        let error = PermissionError.fullDiskAccessDenied(context: "Notes")
+        #expect(error.userMessage.contains("Full Disk Access"))
+        #expect(error.userMessage.contains("Notes"))
         #expect(error.userMessage.contains("System Settings"))
     }
 
@@ -40,7 +47,7 @@ struct PermissionErrorTests {
             .calendarDenied,
             .remindersDenied,
             .contactsDenied,
-            .fullDiskAccessDenied,
+            .fullDiskAccessDenied(),
             .automationDenied(app: "Test")
         ]
         Task { @Sendable in
