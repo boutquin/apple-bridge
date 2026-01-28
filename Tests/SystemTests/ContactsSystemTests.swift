@@ -16,7 +16,7 @@ struct ContactsSystemTests {
     /// Verifies that the contacts service can search without crashing.
     @Test("Real contacts search works")
     func testRealContactsSearch() async throws {
-        let adapter = RealContactsAdapter()
+        let adapter = ContactsAdapter()
         let service = ContactsFrameworkService(adapter: adapter)
         let contacts = try await service.search(query: "", limit: 5)
 
@@ -28,7 +28,7 @@ struct ContactsSystemTests {
     /// Verifies that the contacts service can search by name.
     @Test("Real contacts name search works")
     func testRealContactsNameSearch() async throws {
-        let adapter = RealContactsAdapter()
+        let adapter = ContactsAdapter()
         let service = ContactsFrameworkService(adapter: adapter)
         // Search for a common name that might exist
         let contacts = try await service.search(query: "John", limit: 5)
@@ -41,7 +41,7 @@ struct ContactsSystemTests {
     /// Verifies that the contacts service handles "me" card.
     @Test("Real contacts me card works")
     func testRealContactsMeCard() async throws {
-        let adapter = RealContactsAdapter()
+        let adapter = ContactsAdapter()
         let service = ContactsFrameworkService(adapter: adapter)
 
         // me() returns nil on macOS (no CNContactStore.fetchMeCard())

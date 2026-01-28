@@ -26,7 +26,7 @@ public struct MailAppleScriptService: MailService, Sendable {
 
     /// Creates a new Mail service using the default adapter.
     public init() {
-        self.adapter = RealMailAdapter()
+        self.adapter = AppleScriptMailAdapter()
     }
 
     /// Creates a new Mail service with a custom adapter (for testing).
@@ -40,7 +40,7 @@ public struct MailAppleScriptService: MailService, Sendable {
     ///
     /// - Parameter runner: The AppleScript runner to use.
     public init(runner: any AppleScriptRunnerProtocol) {
-        self.adapter = RealMailAdapter(runner: runner)
+        self.adapter = AppleScriptMailAdapter(runner: runner)
     }
 
     // MARK: - MailService Protocol

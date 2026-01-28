@@ -53,7 +53,7 @@ public struct ContactData: Sendable, Equatable, Codable {
 ///
 /// ## Example
 /// ```swift
-/// let adapter: ContactsAdapterProtocol = RealContactsAdapter()
+/// let adapter: ContactsAdapterProtocol = ContactsAdapter()
 /// if try await adapter.requestAccess() {
 ///     let contacts = try await adapter.fetchContacts(query: "John", limit: 10)
 /// }

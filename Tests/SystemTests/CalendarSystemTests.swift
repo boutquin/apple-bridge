@@ -26,7 +26,7 @@ struct CalendarSystemTests {
     /// - Basic query execution succeeds
     @Test("Real calendar access works")
     func testRealCalendarAccess() async throws {
-        let adapter = RealEventKitAdapter()
+        let adapter = EventKitAdapter()
         let service = EventKitCalendarService(adapter: adapter)
         let events = try await service.listEvents(limit: 1, from: nil, to: nil, cursor: nil)
 
@@ -39,7 +39,7 @@ struct CalendarSystemTests {
     /// Verifies that the calendar service can search events.
     @Test("Real calendar search works")
     func testRealCalendarSearch() async throws {
-        let adapter = RealEventKitAdapter()
+        let adapter = EventKitAdapter()
         let service = EventKitCalendarService(adapter: adapter)
         // Search for a common term that might exist
         let events = try await service.searchEvents(query: "meeting", limit: 5, from: nil, to: nil, cursor: nil)

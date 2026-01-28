@@ -8,7 +8,7 @@ import Core
 ///
 /// ## Example
 /// ```swift
-/// let adapter = RealContactsAdapter()
+/// let adapter = ContactsAdapter()
 /// let service = ContactsFrameworkService(adapter: adapter)
 /// let contacts = try await service.search(query: "John", limit: 10)
 /// ```

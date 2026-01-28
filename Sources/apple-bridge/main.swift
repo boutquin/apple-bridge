@@ -77,12 +77,12 @@ struct AppleBridge {
     /// Creates the production services container with real implementations.
     private static func createProductionServices() -> AppleServices {
         // EventKit-based services
-        let eventKitAdapter = RealEventKitAdapter()
+        let eventKitAdapter = EventKitAdapter()
         let calendarService = EventKitCalendarService(adapter: eventKitAdapter)
         let remindersService = EventKitRemindersService(adapter: eventKitAdapter)
 
         // Contacts framework service
-        let contactsAdapter = RealContactsAdapter()
+        let contactsAdapter = ContactsAdapter()
         let contactsService = ContactsFrameworkService(adapter: contactsAdapter)
 
         // SQLite-based services

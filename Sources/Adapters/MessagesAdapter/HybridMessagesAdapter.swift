@@ -1,7 +1,7 @@
 import Foundation
 import Core
 
-/// SQLite-based implementation of `MessagesAdapterProtocol`.
+/// Hybrid SQLite+AppleScript implementation of `MessagesAdapterProtocol`.
 ///
 /// Reads from the macOS Messages database at:
 /// `~/Library/Messages/chat.db`
@@ -11,16 +11,16 @@ import Core
 ///
 /// ## Usage
 /// ```swift
-/// let adapter = RealMessagesAdapter()
+/// let adapter = HybridMessagesAdapter()
 /// let chats = try await adapter.fetchChats(limit: 10)
 /// let messages = try await adapter.fetchMessages(chatId: "chat-123", limit: 20)
 /// ```
 ///
 /// For testing, you can provide a custom database path:
 /// ```swift
-/// let adapter = RealMessagesAdapter(dbPath: "/path/to/test-messages.sqlite")
+/// let adapter = HybridMessagesAdapter(dbPath: "/path/to/test-messages.sqlite")
 /// ```
-public struct RealMessagesAdapter: MessagesAdapterProtocol, Sendable {
+public struct HybridMessagesAdapter: MessagesAdapterProtocol, Sendable {
 
     /// Path to the SQLite database.
     private let dbPath: String

@@ -9,7 +9,7 @@ import Core
 ///
 /// ## Example
 /// ```swift
-/// let adapter = RealEventKitAdapter()
+/// let adapter = EventKitAdapter()
 /// let service = EventKitCalendarService(adapter: adapter)
 /// let events = try await service.listEvents(limit: 10, from: nil, to: nil, cursor: nil)
 /// ```

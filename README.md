@@ -202,15 +202,27 @@ Each domain uses the **Adapter Pattern** to decouple the service layer from spec
 
 #### Adapter Protocols by Domain
 
-| Domain | Adapter Protocol | DTOs | Real Implementation |
-|--------|------------------|------|---------------------|
-| **Calendar** | `CalendarAdapterProtocol` | `CalendarEventData`, `CalendarData` | `RealEventKitAdapter` |
-| **Reminders** | `CalendarAdapterProtocol` | `ReminderData`, `ReminderListData` | `RealEventKitAdapter` |
-| **Contacts** | `ContactsAdapterProtocol` | `ContactData` | `RealContactsAdapter` |
-| **Notes** | `NotesAdapterProtocol` | `NoteData`, `NoteFolderData` | `RealNotesAdapter` |
-| **Messages** | `MessagesAdapterProtocol` | `MessageData`, `ChatData` | `RealMessagesAdapter` |
-| **Mail** | `MailAdapterProtocol` | `EmailData`, `MailboxData` | `RealMailAdapter` |
+| Domain | Adapter Protocol | DTOs | Implementation |
+|--------|------------------|------|----------------|
+| **Calendar** | `CalendarAdapterProtocol` | `CalendarEventData`, `CalendarData` | `EventKitAdapter` |
+| **Reminders** | `CalendarAdapterProtocol` | `ReminderData`, `ReminderListData` | `EventKitAdapter` |
+| **Contacts** | `ContactsAdapterProtocol` | `ContactData` | `ContactsAdapter` |
+| **Notes** | `NotesAdapterProtocol` | `NoteData`, `NoteFolderData` | `SQLiteNotesAdapter` |
+| **Messages** | `MessagesAdapterProtocol` | `MessageData`, `ChatData` | `HybridMessagesAdapter` |
+| **Mail** | `MailAdapterProtocol` | `EmailData`, `MailboxData` | `AppleScriptMailAdapter` |
 | **Maps** | `MapsAdapterProtocol` | `LocationData` | `MapKitAdapter` |
+
+#### Read/Write Technology by Domain
+
+| Domain | Read | Write | Adapter |
+|--------|------|-------|---------|
+| Calendar | EventKit | EventKit | `EventKitAdapter` |
+| Reminders | EventKit | EventKit | `EventKitAdapter` |
+| Contacts | Contacts framework | Contacts framework | `ContactsAdapter` |
+| Notes | SQLite | SQLite | `SQLiteNotesAdapter` |
+| Messages | SQLite | AppleScript | `HybridMessagesAdapter` |
+| Mail | AppleScript | AppleScript | `AppleScriptMailAdapter` |
+| Maps | MapKit | MapKit | `MapKitAdapter` |
 
 #### DTO Design Principles
 
@@ -297,22 +309,22 @@ func testSearchNotes() async throws {
 Sources/Adapters/
 ├── EventKitAdapter/
 │   ├── CalendarAdapterProtocol.swift    # Protocol + Calendar/Reminder DTOs
-│   ├── RealEventKitAdapter.swift        # EventKit implementation
+│   ├── EventKitAdapter.swift            # EventKit implementation
 │   ├── EventKitCalendarService.swift    # CalendarService using adapter
 │   └── EventKitRemindersService.swift   # RemindersService using adapter
 ├── ContactsAdapter/
 │   ├── ContactsAdapterProtocol.swift    # Protocol + ContactData DTO
-│   ├── RealContactsAdapter.swift        # Contacts framework implementation
+│   ├── ContactsAdapter.swift            # Contacts framework implementation
 │   └── ContactsFrameworkService.swift   # ContactsService using adapter
 ├── NotesAdapter/
 │   ├── NotesAdapterProtocol.swift       # Protocol + NoteData DTO
-│   └── RealNotesAdapter.swift           # SQLite implementation
+│   └── SQLiteNotesAdapter.swift         # SQLite implementation
 ├── MessagesAdapter/
 │   ├── MessagesAdapterProtocol.swift    # Protocol + MessageData/ChatData DTOs
-│   └── RealMessagesAdapter.swift        # SQLite + AppleScript implementation
+│   └── HybridMessagesAdapter.swift      # SQLite (read) + AppleScript (send) implementation
 ├── MailAdapter/
 │   ├── MailAdapterProtocol.swift        # Protocol + EmailData DTO
-│   └── RealMailAdapter.swift            # AppleScript implementation
+│   └── AppleScriptMailAdapter.swift     # AppleScript implementation
 ├── MapsAdapter/
 │   ├── MapsAdapterProtocol.swift        # Protocol + LocationData DTO
 │   ├── MapKitAdapter.swift              # MapKit implementation

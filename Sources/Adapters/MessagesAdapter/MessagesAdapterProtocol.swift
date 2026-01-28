@@ -91,7 +91,7 @@ public struct ChatData: Sendable, Equatable, Codable {
 ///
 /// ## Example
 /// ```swift
-/// let adapter: MessagesAdapterProtocol = RealMessagesAdapter()
+/// let adapter: MessagesAdapterProtocol = HybridMessagesAdapter()
 /// let messages = try await adapter.fetchMessages(chatId: "chat-123", limit: 20)
 /// ```
 public protocol MessagesAdapterProtocol: Sendable {

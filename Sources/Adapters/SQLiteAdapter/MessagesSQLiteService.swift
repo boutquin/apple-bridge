@@ -32,7 +32,7 @@ public struct MessagesSQLiteService: MessagesService, Sendable {
     ///
     /// Uses the default path: `~/Library/Messages/chat.db`
     public init() {
-        self.adapter = RealMessagesAdapter()
+        self.adapter = HybridMessagesAdapter()
     }
 
     /// Creates a new Messages service with a custom adapter (for testing).
@@ -50,7 +50,7 @@ public struct MessagesSQLiteService: MessagesService, Sendable {
     ///   - dbPath: Path to the SQLite database file.
     ///   - readOnly: Whether to open read-only. Defaults to `true`.
     public init(dbPath: String, readOnly: Bool = true) {
-        self.adapter = RealMessagesAdapter(dbPath: dbPath, readOnly: readOnly)
+        self.adapter = HybridMessagesAdapter(dbPath: dbPath, readOnly: readOnly)
     }
 
     // MARK: - MessagesService Protocol

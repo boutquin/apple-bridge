@@ -16,7 +16,7 @@ struct RemindersSystemTests {
     /// Verifies that the reminders service can list reminder lists without crashing.
     @Test("Real reminders list access works")
     func testRealRemindersListAccess() async throws {
-        let adapter = RealEventKitAdapter()
+        let adapter = EventKitAdapter()
         let service = EventKitRemindersService(adapter: adapter)
         let lists = try await service.getLists()
 
@@ -28,7 +28,7 @@ struct RemindersSystemTests {
     /// Verifies that the reminders service can list reminders.
     @Test("Real reminders access works")
     func testRealRemindersAccess() async throws {
-        let adapter = RealEventKitAdapter()
+        let adapter = EventKitAdapter()
         let service = EventKitRemindersService(adapter: adapter)
 
         // First get a list ID (if any exist)
@@ -48,7 +48,7 @@ struct RemindersSystemTests {
     /// Verifies that the reminders service can search reminders.
     @Test("Real reminders search works")
     func testRealRemindersSearch() async throws {
-        let adapter = RealEventKitAdapter()
+        let adapter = EventKitAdapter()
         let service = EventKitRemindersService(adapter: adapter)
         let reminders = try await service.search(query: "test", limit: 5, includeCompleted: false, cursor: nil)
 

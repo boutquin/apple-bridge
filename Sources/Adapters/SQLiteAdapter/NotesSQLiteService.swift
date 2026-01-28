@@ -30,7 +30,7 @@ public struct NotesSQLiteService: NotesService, Sendable {
     ///
     /// Uses the default path: `~/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite`
     public init() {
-        self.adapter = RealNotesAdapter()
+        self.adapter = SQLiteNotesAdapter()
     }
 
     /// Creates a new Notes service with a custom adapter (for testing).
@@ -48,7 +48,7 @@ public struct NotesSQLiteService: NotesService, Sendable {
     ///   - dbPath: Path to the SQLite database file.
     ///   - readOnly: Whether to open read-only. Defaults to `true`.
     public init(dbPath: String, readOnly: Bool = true) {
-        self.adapter = RealNotesAdapter(dbPath: dbPath, readOnly: readOnly)
+        self.adapter = SQLiteNotesAdapter(dbPath: dbPath, readOnly: readOnly)
     }
 
     // MARK: - NotesService Protocol

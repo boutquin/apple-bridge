@@ -1,7 +1,7 @@
 import Foundation
 import Core
 
-/// SQLite-based implementation of `NotesAdapterProtocol`.
+/// SQLite implementation of `NotesAdapterProtocol`.
 ///
 /// Reads from the macOS Notes database at:
 /// `~/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite`
@@ -10,15 +10,15 @@ import Core
 ///
 /// ## Usage
 /// ```swift
-/// let adapter = RealNotesAdapter()
+/// let adapter = SQLiteNotesAdapter()
 /// let notes = try await adapter.searchNotes(query: "meeting", limit: 10, includeBody: false)
 /// ```
 ///
 /// For testing, you can provide a custom database path:
 /// ```swift
-/// let adapter = RealNotesAdapter(dbPath: "/path/to/test-notes.sqlite")
+/// let adapter = SQLiteNotesAdapter(dbPath: "/path/to/test-notes.sqlite")
 /// ```
-public struct RealNotesAdapter: NotesAdapterProtocol, Sendable {
+public struct SQLiteNotesAdapter: NotesAdapterProtocol, Sendable {
 
     /// Path to the SQLite database.
     private let dbPath: String

@@ -107,7 +107,7 @@ public struct MailboxData: Sendable, Equatable, Codable {
 ///
 /// ## Example
 /// ```swift
-/// let adapter: MailAdapterProtocol = RealMailAdapter()
+/// let adapter: MailAdapterProtocol = AppleScriptMailAdapter()
 /// let emails = try await adapter.fetchUnread(limit: 10, includeBody: false)
 /// ```
 public protocol MailAdapterProtocol: Sendable {

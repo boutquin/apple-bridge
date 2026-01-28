@@ -9,14 +9,14 @@ import EventKit
 import AppKit
 #endif
 
-/// Real implementation of `CalendarAdapterProtocol` using the EventKit framework.
+/// EventKit implementation of `CalendarAdapterProtocol`.
 ///
 /// This adapter provides actual access to the user's calendar and reminders
 /// through Apple's EventKit framework.
 ///
 /// ## Usage
 /// ```swift
-/// let adapter = RealEventKitAdapter()
+/// let adapter = EventKitAdapter()
 /// if try await adapter.requestCalendarAccess() {
 ///     let events = try await adapter.fetchEvents(from: Date(), to: Date().addingTimeInterval(86400), calendarId: nil)
 /// }
@@ -25,7 +25,7 @@ import AppKit
 /// ## Requirements
 /// - macOS 10.15+ (uses modern async/await APIs)
 /// - Calendar and Reminders permissions must be granted by the user
-public actor RealEventKitAdapter: CalendarAdapterProtocol {
+public actor EventKitAdapter: CalendarAdapterProtocol {
 
     #if canImport(EventKit)
     /// Shared event store for calendar and reminders access.

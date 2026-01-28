@@ -9,7 +9,7 @@ import Core
 ///
 /// ## Example
 /// ```swift
-/// let adapter = RealEventKitAdapter()
+/// let adapter = EventKitAdapter()
 /// let service = EventKitRemindersService(adapter: adapter)
 /// let lists = try await service.getLists()
 /// ```

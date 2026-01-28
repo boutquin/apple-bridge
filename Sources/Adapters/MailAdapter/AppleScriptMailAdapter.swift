@@ -1,7 +1,7 @@
 import Foundation
 import Core
 
-/// AppleScript-based implementation of `MailAdapterProtocol`.
+/// AppleScript implementation of `MailAdapterProtocol`.
 ///
 /// Uses AppleScript to interact with Apple Mail for reading, searching,
 /// and sending emails. All operations are executed through an `AppleScriptRunnerProtocol`
@@ -9,16 +9,16 @@ import Core
 ///
 /// ## Usage
 /// ```swift
-/// let adapter = RealMailAdapter()
+/// let adapter = AppleScriptMailAdapter()
 /// let emails = try await adapter.fetchUnread(limit: 10, includeBody: false)
 /// ```
 ///
 /// For testing with a mock runner:
 /// ```swift
 /// let runner = MockAppleScriptRunner()
-/// let adapter = RealMailAdapter(runner: runner)
+/// let adapter = AppleScriptMailAdapter(runner: runner)
 /// ```
-public struct RealMailAdapter: MailAdapterProtocol, Sendable {
+public struct AppleScriptMailAdapter: MailAdapterProtocol, Sendable {
 
     /// The AppleScript runner to use for executing scripts.
     private let runner: any AppleScriptRunnerProtocol

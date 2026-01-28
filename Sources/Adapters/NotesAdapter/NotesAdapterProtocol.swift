@@ -85,7 +85,7 @@ public struct NoteFolderData: Sendable, Equatable, Codable {
 ///
 /// ## Example
 /// ```swift
-/// let adapter: NotesAdapterProtocol = RealNotesAdapter()
+/// let adapter: NotesAdapterProtocol = SQLiteNotesAdapter()
 /// let notes = try await adapter.searchNotes(query: "meeting", limit: 10, includeBody: false)
 /// ```
 public protocol NotesAdapterProtocol: Sendable {

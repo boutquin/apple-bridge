@@ -9,14 +9,14 @@ import Contacts
 import AppKit
 #endif
 
-/// Real implementation of `ContactsAdapterProtocol` using the Contacts framework.
+/// Contacts framework implementation of `ContactsAdapterProtocol`.
 ///
 /// This adapter provides actual access to the user's contacts through
 /// Apple's Contacts framework.
 ///
 /// ## Usage
 /// ```swift
-/// let adapter = RealContactsAdapter()
+/// let adapter = ContactsAdapter()
 /// if try await adapter.requestAccess() {
 ///     let contacts = try await adapter.fetchContacts(query: "John", limit: 10)
 /// }
@@ -25,7 +25,7 @@ import AppKit
 /// ## Requirements
 /// - macOS 10.11+ (uses Contacts framework)
 /// - Contacts permission must be granted by the user
-public actor RealContactsAdapter: ContactsAdapterProtocol {
+public actor ContactsAdapter: ContactsAdapterProtocol {
 
     #if canImport(Contacts)
     /// Shared contact store for contacts access.

@@ -160,7 +160,7 @@ public struct ReminderListData: Sendable, Equatable {
 ///
 /// ## Example
 /// ```swift
-/// let adapter: CalendarAdapterProtocol = RealEventKitAdapter()
+/// let adapter: CalendarAdapterProtocol = EventKitAdapter()
 /// if try await adapter.requestCalendarAccess() {
 ///     let events = try await adapter.fetchEvents(from: Date(), to: Date().addingTimeInterval(86400), calendarId: nil)
 /// }
