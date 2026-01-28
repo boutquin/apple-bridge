@@ -60,8 +60,8 @@ public actor ToolRegistry {
         // Contacts tools (4) - Phase 7: Real handlers wired
         registerContactsTools(into: &tools, services: services)
 
-        // Notes tools (4)
-        registerNotesTools(into: &tools)
+        // Notes tools (4) - Phase 9: Real handlers wired
+        registerNotesTools(into: &tools, services: services)
 
         // Messages tools (5)
         registerMessagesTools(into: &tools)
@@ -448,8 +448,9 @@ public actor ToolRegistry {
 
     // MARK: - Notes Tools (4)
 
-    private static func registerNotesTools(into tools: inout [String: ToolEntry]) {
-        register(
+    /// Registers notes tools with real handlers (Phase 9).
+    private static func registerNotesTools(into tools: inout [String: ToolEntry], services: any AppleServicesProtocol) {
+        registerWithHandler(
             into: &tools,
             name: "notes_search",
             description: "Search notes by query",
@@ -461,10 +462,11 @@ public actor ToolRegistry {
                     "includeBody": .object(["type": "boolean", "description": "Whether to include note bodies"])
                 ]),
                 "required": .array([.string("query")])
-            ])
+            ]),
+            handler: { args in await NotesHandlers.searchNotes(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "notes_get",
             description: "Get a note by ID",
@@ -474,10 +476,11 @@ public actor ToolRegistry {
                     "id": .object(["type": "string", "description": "Note ID"])
                 ]),
                 "required": .array([.string("id")])
-            ])
+            ]),
+            handler: { args in await NotesHandlers.getNote(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "notes_create",
             description: "Create a new note",
@@ -489,10 +492,11 @@ public actor ToolRegistry {
                     "folderId": .object(["type": "string", "description": "Folder ID"])
                 ]),
                 "required": .array([.string("title")])
-            ])
+            ]),
+            handler: { args in await NotesHandlers.createNote(services: services, arguments: args) }
         )
 
-        register(
+        registerWithHandler(
             into: &tools,
             name: "notes_open",
             description: "Open a note in the Notes app",
@@ -502,7 +506,8 @@ public actor ToolRegistry {
                     "id": .object(["type": "string", "description": "Note ID"])
                 ]),
                 "required": .array([.string("id")])
-            ])
+            ]),
+            handler: { args in await NotesHandlers.openNote(services: services, arguments: args) }
         )
     }
 

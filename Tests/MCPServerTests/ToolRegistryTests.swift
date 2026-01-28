@@ -34,8 +34,8 @@ struct ToolRegistryTests {
         let services = makeTestServices()
         let registry = ToolRegistry.create(services: services)
 
-        // Use a tool that's still a stub (notes_search) - calendar, reminders, and contacts tools are now implemented
-        let result = await registry.callTool(name: "notes_search", arguments: nil)
+        // Use a tool that's still a stub (messages_send) - calendar, reminders, contacts, and notes tools are now implemented
+        let result = await registry.callTool(name: "messages_send", arguments: nil)
 
         #expect(result.isError == true)
 
