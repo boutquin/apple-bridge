@@ -10,9 +10,9 @@ Apple Bridge exposes 7 macOS domains through MCP tools:
 |--------|-------|---------------|
 | **Calendar** | `calendar_list`, `calendar_create`, `calendar_update`, `calendar_delete` | EventKit |
 | **Reminders** | `reminders_list`, `reminders_create`, `reminders_update`, `reminders_complete`, `reminders_delete` | EventKit |
-| **Contacts** | `contacts_search`, `contacts_me` | Contacts Framework |
-| **Notes** | `notes_search`, `notes_list`, `notes_create` | SQLite (Full Disk Access) |
-| **Messages** | `messages_read`, `messages_send`, `messages_unread` | SQLite (Full Disk Access) |
+| **Contacts** | `contacts_search`, `contacts_me` | AppleScript |
+| **Notes** | `notes_search`, `notes_list`, `notes_create` | AppleScript |
+| **Messages** | `messages_read`, `messages_send`, `messages_unread` | AppleScript (partial) |
 | **Mail** | `mail_search`, `mail_unread`, `mail_send` | AppleScript |
 | **Maps** | `maps_search`, `maps_nearby`, `maps_directions`, `maps_open` | MapKit |
 
@@ -40,10 +40,14 @@ Apple Bridge requires various macOS permissions depending on which domains you u
 |------------|--------------|----------------|
 | **Calendar** | Calendar domain | System Settings → Privacy & Security → Calendars |
 | **Reminders** | Reminders domain | System Settings → Privacy & Security → Reminders |
-| **Contacts** | Contacts domain | System Settings → Privacy & Security → Contacts |
-| **Full Disk Access** | Notes, Messages | System Settings → Privacy & Security → Full Disk Access |
+| **Automation (Contacts)** | Contacts domain | System Settings → Privacy & Security → Automation |
+| **Automation (Notes)** | Notes domain | System Settings → Privacy & Security → Automation |
+| **Automation (Messages)** | Messages domain (chats, send) | System Settings → Privacy & Security → Automation |
+| **Full Disk Access** | Messages domain (read, unread) | System Settings → Privacy & Security → Full Disk Access |
 | **Automation (Mail)** | Mail domain | System Settings → Privacy & Security → Automation |
 | **Location Services** | Maps domain | System Settings → Privacy & Security → Location Services |
+
+> **Note:** Messages read/unread requires Full Disk Access because the Messages.app scripting dictionary does not expose individual messages. All other AppleScript domains (Contacts, Notes, Messages chats/send, Mail) only need Automation permission.
 
 ## Usage with Claude Desktop
 
@@ -106,8 +110,8 @@ swift test --filter SystemTests
 Before running system tests, ensure:
 
 1. **Calendar access** granted to Terminal/IDE
-2. **Contacts access** granted to Terminal/IDE
-3. **Full Disk Access** granted to Terminal/IDE (for Notes/Messages)
+2. **Automation access** granted to Terminal/IDE (for Contacts, Notes, Messages, Mail)
+3. **Full Disk Access** granted to Terminal/IDE (only for Messages read/unread tests)
 4. **Apple Mail** configured with at least one account
 5. **Apple Maps** available
 
@@ -180,14 +184,14 @@ Apple Bridge uses a clean three-layer architecture that separates concerns and e
 ┌─────────────────────────────────────────────────────────────────┐
 │                      Adapter Layer                              │
 │  (Adapters/)                                                    │
-│  Adapter protocols + Real implementations                        │
+│  Adapter protocols + Real implementations                       │
 │  Uses DTOs (CalendarEventData, NoteData, MessageData, etc.)     │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    macOS Frameworks                             │
-│  EventKit, Contacts, SQLite, AppleScript                        │
+│  EventKit, AppleScript, MapKit                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -206,9 +210,9 @@ Each domain uses the **Adapter Pattern** to decouple the service layer from spec
 |--------|------------------|------|----------------|
 | **Calendar** | `CalendarAdapterProtocol` | `CalendarEventData`, `CalendarData` | `EventKitAdapter` |
 | **Reminders** | `CalendarAdapterProtocol` | `ReminderData`, `ReminderListData` | `EventKitAdapter` |
-| **Contacts** | `ContactsAdapterProtocol` | `ContactData` | `ContactsAdapter` |
-| **Notes** | `NotesAdapterProtocol` | `NoteData`, `NoteFolderData` | `SQLiteNotesAdapter` |
-| **Messages** | `MessagesAdapterProtocol` | `MessageData`, `ChatData` | `HybridMessagesAdapter` |
+| **Contacts** | `ContactsAdapterProtocol` | `ContactData` | `AppleScriptContactsAdapter` |
+| **Notes** | `NotesAdapterProtocol` | `NoteData`, `NoteFolderData` | `AppleScriptNotesAdapter` |
+| **Messages** | `MessagesAdapterProtocol` | `MessageData`, `ChatData` | `AppleScriptMessagesAdapter` |
 | **Mail** | `MailAdapterProtocol` | `EmailData`, `MailboxData` | `AppleScriptMailAdapter` |
 | **Maps** | `MapsAdapterProtocol` | `LocationData` | `MapKitAdapter` |
 
@@ -218,9 +222,9 @@ Each domain uses the **Adapter Pattern** to decouple the service layer from spec
 |--------|------|-------|---------|
 | Calendar | EventKit | EventKit | `EventKitAdapter` |
 | Reminders | EventKit | EventKit | `EventKitAdapter` |
-| Contacts | Contacts framework | Contacts framework | `ContactsAdapter` |
-| Notes | SQLite | SQLite | `SQLiteNotesAdapter` |
-| Messages | SQLite | AppleScript | `HybridMessagesAdapter` |
+| Contacts | AppleScript | Read-only | `AppleScriptContactsAdapter` |
+| Notes | AppleScript | AppleScript | `AppleScriptNotesAdapter` |
+| Messages | AppleScript (chats only) | AppleScript | `AppleScriptMessagesAdapter` |
 | Mail | AppleScript | AppleScript | `AppleScriptMailAdapter` |
 | Maps | MapKit | MapKit | `MapKitAdapter` |
 
@@ -314,14 +318,17 @@ Sources/Adapters/
 │   └── EventKitRemindersService.swift   # RemindersService using adapter
 ├── ContactsAdapter/
 │   ├── ContactsAdapterProtocol.swift    # Protocol + ContactData DTO
-│   ├── ContactsAdapter.swift            # Contacts framework implementation
+│   ├── ContactsAdapter.swift            # Contacts framework implementation (requires signed binary)
+│   ├── AppleScriptContactsAdapter.swift # AppleScript implementation (default)
 │   └── ContactsFrameworkService.swift   # ContactsService using adapter
 ├── NotesAdapter/
 │   ├── NotesAdapterProtocol.swift       # Protocol + NoteData DTO
-│   └── SQLiteNotesAdapter.swift         # SQLite implementation
+│   ├── SQLiteNotesAdapter.swift         # SQLite implementation (requires Full Disk Access)
+│   └── AppleScriptNotesAdapter.swift    # AppleScript implementation (default)
 ├── MessagesAdapter/
 │   ├── MessagesAdapterProtocol.swift    # Protocol + MessageData/ChatData DTOs
-│   └── HybridMessagesAdapter.swift      # SQLite (read) + AppleScript (send) implementation
+│   ├── HybridMessagesAdapter.swift      # SQLite (read) + AppleScript (send) (requires FDA)
+│   └── AppleScriptMessagesAdapter.swift # AppleScript implementation (default, partial)
 ├── MailAdapter/
 │   ├── MailAdapterProtocol.swift        # Protocol + EmailData DTO
 │   └── AppleScriptMailAdapter.swift     # AppleScript implementation
@@ -373,20 +380,23 @@ Apple Bridge implements MCP specification 2024-11-05:
 
 ### Permission Denied Errors
 
-**"Permission denied" for Calendar/Reminders/Contacts:**
+**"Permission denied" for Calendar/Reminders:**
 1. Open System Settings → Privacy & Security
-2. Find the relevant section (Calendars, Reminders, or Contacts)
+2. Find the relevant section (Calendars or Reminders)
 3. Enable access for your terminal application or Claude Desktop
 
-**"Unable to access database" for Notes/Messages:**
+**"AppleScript error" for Contacts/Notes/Messages/Mail:**
+1. Open System Settings → Privacy & Security → Automation
+2. Enable access to the relevant app (Contacts.app, Notes.app, Messages.app, Mail.app)
+3. You may need to run a command once to trigger the permission prompt
+
+**"Full Disk Access required" for Messages read/unread:**
+The Messages.app scripting dictionary does not expose individual messages, so reading message history requires direct database access via Full Disk Access:
 1. Open System Settings → Privacy & Security → Full Disk Access
-2. Add your terminal application or the `apple-bridge` executable
+2. Add the `apple-bridge` executable (requires a properly signed binary)
 3. Restart the application after granting access
 
-**"AppleScript error" for Mail/Maps:**
-1. Open System Settings → Privacy & Security → Automation
-2. Enable access to Mail.app and/or Maps.app for your terminal
-3. You may need to run a command once to trigger the permission prompt
+> **Note:** Ad-hoc signed binaries cannot reliably hold Full Disk Access TCC entries. A signed binary (Apple Developer certificate) is required for Messages read/unread functionality.
 
 ### Common Issues
 
@@ -398,7 +408,11 @@ Apple Bridge implements MCP specification 2024-11-05:
 **Tool returns empty results:**
 - Verify the relevant macOS app has data (e.g., Calendar has events)
 - Check that permissions are granted in System Settings
-- For Notes/Messages, ensure Full Disk Access is enabled
+
+**Mail operations are slow or time out:**
+- Mail uses indexed reverse iteration to avoid loading all messages at once
+- Very large inboxes (100K+ messages) may still take a few seconds for search
+- Ensure Mail.app is not in an unresponsive state
 
 **Tests fail with permission errors:**
 - Unit tests don't require permissions and should always pass
