@@ -42,28 +42,39 @@ public struct AppleScriptMailAdapter: MailAdapterProtocol, Sendable {
     public func fetchUnread(limit: Int, includeBody: Bool) async throws -> [EmailData] {
         let bodyClause = includeBody ? "content of theMessage" : "\"\""
 
+        // Iterate newest-first by index and collect unread messages up to limit.
+        // Uses `message i of inbox` instead of materializing the full collection
+        // (`messages of inbox`) — on a 215K inbox, materializing all references
+        // causes error -1741 (errAEEventFailed) and locks up Mail.app.
         let script = """
             tell application "Mail"
                 set resultList to {}
-                set unreadMessages to (messages of inbox whose read status is false)
-                set msgCount to count of unreadMessages
-                if msgCount > \(limit) then set msgCount to \(limit)
-                repeat with i from 1 to msgCount
-                    set theMessage to item i of unreadMessages
-                    set msgId to id of theMessage
-                    set msgSubject to subject of theMessage
-                    set msgFrom to sender of theMessage
-                    set msgTo to address of first to recipient of theMessage
-                    set msgDate to date received of theMessage
-                    set msgMailbox to name of mailbox of theMessage
-                    set msgBody to \(bodyClause)
-                    set end of resultList to (msgId as string) & "\\t" & msgSubject & "\\t" & msgFrom & "\\t" & msgTo & "\\t" & (msgDate as string) & "\\t" & msgMailbox & "\\t" & msgBody & "\\n"
+                set totalCount to count of messages of inbox
+                set found to 0
+                repeat with i from totalCount to 1 by -1
+                    if found ≥ \(limit) then exit repeat
+                    set theMessage to message i of inbox
+                    if read status of theMessage is false then
+                        set found to found + 1
+                        set msgId to id of theMessage
+                        set msgSubject to subject of theMessage
+                        set msgFrom to sender of theMessage
+                        try
+                            set msgTo to address of first to recipient of theMessage
+                        on error
+                            set msgTo to ""
+                        end try
+                        set msgDate to date received of theMessage
+                        set msgMailbox to name of mailbox of theMessage
+                        set msgBody to \(bodyClause)
+                        set end of resultList to (msgId as string) & "\\t" & msgSubject & "\\t" & msgFrom & "\\t" & msgTo & "\\t" & (msgDate as string) & "\\t" & msgMailbox & "\\t" & msgBody & "\\n"
+                    end if
                 end repeat
                 return resultList as string
             end tell
             """
 
-        let result = try await runner.run(script: script)
+        let result = try await runner.run(script: script, timeout: 30)
         return parseEmailResponse(result, isUnread: true)
     }
 
@@ -71,29 +82,39 @@ public struct AppleScriptMailAdapter: MailAdapterProtocol, Sendable {
         let escapedQuery = escapeForAppleScript(query)
         let bodyClause = includeBody ? "content of theMessage" : "\"\""
 
+        // Iterate newest-first by index and match subject only.
+        // Uses `message i of inbox` to avoid materializing the full collection.
+        // Content search dropped — body scanning via AppleScript is too expensive.
         let script = """
             tell application "Mail"
                 set resultList to {}
-                set allMessages to (messages of inbox whose subject contains "\(escapedQuery)" or content contains "\(escapedQuery)")
-                set msgCount to count of allMessages
-                if msgCount > \(limit) then set msgCount to \(limit)
-                repeat with i from 1 to msgCount
-                    set theMessage to item i of allMessages
-                    set msgId to id of theMessage
+                set totalCount to count of messages of inbox
+                set found to 0
+                repeat with i from totalCount to 1 by -1
+                    if found ≥ \(limit) then exit repeat
+                    set theMessage to message i of inbox
                     set msgSubject to subject of theMessage
-                    set msgFrom to sender of theMessage
-                    set msgTo to address of first to recipient of theMessage
-                    set msgDate to date received of theMessage
-                    set msgMailbox to name of mailbox of theMessage
-                    set msgIsRead to read status of theMessage
-                    set msgBody to \(bodyClause)
-                    set end of resultList to (msgId as string) & "\\t" & msgSubject & "\\t" & msgFrom & "\\t" & msgTo & "\\t" & (msgDate as string) & "\\t" & msgMailbox & "\\t" & msgBody & "\\t" & (msgIsRead as string) & "\\n"
+                    if msgSubject contains "\(escapedQuery)" then
+                        set found to found + 1
+                        set msgId to id of theMessage
+                        set msgFrom to sender of theMessage
+                        try
+                            set msgTo to address of first to recipient of theMessage
+                        on error
+                            set msgTo to ""
+                        end try
+                        set msgDate to date received of theMessage
+                        set msgMailbox to name of mailbox of theMessage
+                        set msgIsRead to read status of theMessage
+                        set msgBody to \(bodyClause)
+                        set end of resultList to (msgId as string) & "\\t" & msgSubject & "\\t" & msgFrom & "\\t" & msgTo & "\\t" & (msgDate as string) & "\\t" & msgMailbox & "\\t" & msgBody & "\\t" & (msgIsRead as string) & "\\n"
+                    end if
                 end repeat
                 return resultList as string
             end tell
             """
 
-        let result = try await runner.run(script: script)
+        let result = try await runner.run(script: script, timeout: 30)
         return parseSearchResponse(result)
     }
 

@@ -5,7 +5,7 @@ import Adapters
 import MCPServer
 
 /// The apple-bridge MCP server version.
-let serverVersion = "3.0.8"
+let serverVersion = "3.0.15"
 
 /// Global reference to the server for signal handling.
 /// This is necessary because C signal handlers cannot capture Swift closures.
@@ -29,8 +29,44 @@ private func handleSignal(_ signal: Int32) {
 struct AppleBridge {
 
     static func main() async throws {
-        // Create production services
-        let services = createProductionServices()
+        // Request permissions at startup unless APPLE_BRIDGE_SKIP_PERMISSIONS is set.
+        // E2E tests set this to avoid blocking on TCC prompts in headless environments.
+        let skipPermissions = ProcessInfo.processInfo.environment["APPLE_BRIDGE_SKIP_PERMISSIONS"] != nil
+
+        let eventKitAdapter = EventKitAdapter()
+
+        if !skipPermissions {
+            // Request EventKit permissions before creating services.
+            // On macOS 14+, calendar access is split into writeOnly vs fullAccess.
+            // Without explicitly requesting fullAccess, reads return empty results
+            // even though writes succeed — making calendar tools non-functional.
+            let calendarGranted = try await eventKitAdapter.requestCalendarAccess()
+            let remindersGranted = try await eventKitAdapter.requestRemindersAccess()
+
+            if !calendarGranted {
+                FileHandle.standardError.write(
+                    Data("[apple-bridge] WARNING: Calendar access not granted. Calendar tools will not work. Grant Full Access in System Settings → Privacy & Security → Calendars.\n".utf8)
+                )
+            }
+            if !remindersGranted {
+                FileHandle.standardError.write(
+                    Data("[apple-bridge] WARNING: Reminders access not granted. Reminder tools will not work. Grant access in System Settings → Privacy & Security → Reminders.\n".utf8)
+                )
+            }
+
+            // Contacts uses AppleScript via Contacts.app — no CNContactStore TCC needed.
+            // Probe to check if Automation permission is granted.
+            let contactsAdapter = AppleScriptContactsAdapter()
+            let contactsGranted = try await contactsAdapter.requestAccess()
+            if !contactsGranted {
+                FileHandle.standardError.write(
+                    Data("[apple-bridge] WARNING: Contacts access not granted. Contacts tools may not work. Grant Automation permission for apple-bridge to control Contacts in System Settings → Privacy & Security → Automation.\n".utf8)
+                )
+            }
+        }
+
+        // Create production services (reuses adapters that already have permissions)
+        let services = createProductionServices(eventKitAdapter: eventKitAdapter)
 
         // Create tool registry and dispatcher
         let registry = ToolRegistry.create(services: services)
@@ -75,19 +111,19 @@ struct AppleBridge {
     }
 
     /// Creates the production services container with real implementations.
-    private static func createProductionServices() -> AppleServices {
-        // EventKit-based services
-        let eventKitAdapter = EventKitAdapter()
+    /// - Parameter eventKitAdapter: The pre-authorized EventKit adapter (permissions already requested at startup).
+    private static func createProductionServices(eventKitAdapter: EventKitAdapter) -> AppleServices {
+        // EventKit-based services (adapter passed in with permissions already granted)
         let calendarService = EventKitCalendarService(adapter: eventKitAdapter)
         let remindersService = EventKitRemindersService(adapter: eventKitAdapter)
 
-        // Contacts framework service
-        let contactsAdapter = ContactsAdapter()
-        let contactsService = ContactsFrameworkService(adapter: contactsAdapter)
+        // Contacts via AppleScript (bypasses CNContactStore TCC issues with ad-hoc signed binaries)
+        let contactsService = ContactsFrameworkService(adapter: AppleScriptContactsAdapter())
 
-        // SQLite-based services
-        let notesService = NotesSQLiteService()
-        let messagesService = MessagesSQLiteService()
+        // Notes and Messages via AppleScript (bypasses Full Disk Access TCC issues with ad-hoc signed binaries)
+        // Note: Messages read/unread still require FDA — AppleScript dictionary has no message class
+        let notesService = NotesSQLiteService(adapter: AppleScriptNotesAdapter())
+        let messagesService = MessagesSQLiteService(adapter: AppleScriptMessagesAdapter())
 
         // AppleScript-based services
         let mailService = MailAppleScriptService()

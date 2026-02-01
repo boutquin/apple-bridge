@@ -56,6 +56,10 @@ public enum ProcessRunner {
 
         let process = Process()
         process.executableURL = executableURL
+        // Skip permission requests in test environment to avoid blocking on TCC prompts.
+        process.environment = ProcessInfo.processInfo.environment.merging(
+            ["APPLE_BRIDGE_SKIP_PERMISSIONS": "1"]
+        ) { _, new in new }
 
         let stdinPipe = Pipe()
         let stdoutPipe = Pipe()

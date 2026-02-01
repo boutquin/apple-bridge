@@ -15,6 +15,14 @@ let package = Package(
                 "Core",
                 "Adapters",
                 "MCPServer"
+            ],
+            linkerSettings: [
+                .unsafeFlags([
+                    "-Xlinker", "-sectcreate",
+                    "-Xlinker", "__TEXT",
+                    "-Xlinker", "__info_plist",
+                    "-Xlinker", "Info.plist"
+                ])
             ]
         ),
         .target(name: "Core"),

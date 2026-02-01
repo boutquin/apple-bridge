@@ -181,12 +181,17 @@ public struct SQLiteNotesAdapter: NotesAdapterProtocol, Sendable {
         do {
             return try SQLiteConnection(path: dbPath, readOnly: readOnly)
         } catch let error as SQLiteError {
-            // Check if this is a permission issue
-            if case .databaseNotFound = error {
-                // Check if it's actually a permission issue vs truly not found
+            // Check if this is a permission issue.
+            // Both .databaseNotFound and .openFailed can indicate FDA denial:
+            // - .databaseNotFound: FileManager.fileExists returns false (stat blocked)
+            // - .openFailed: file exists (stat passes) but sqlite3_open_v2 fails (open blocked)
+            switch error {
+            case .databaseNotFound, .openFailed:
                 if !PermissionChecks.hasFullDiskAccess() {
                     throw PermissionError.fullDiskAccessDenied(context: "Notes")
                 }
+            default:
+                break
             }
             throw error
         }
