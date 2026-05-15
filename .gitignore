@@ -30,3 +30,5 @@ DerivedData/
 *.o
 *.a
 *.dylib
+# Claude Code session logs (private workspace)
+sessions/
