@@ -23,6 +23,12 @@ public enum PermissionError: Error, Sendable {
     /// Calendar access was denied by the user.
     case calendarDenied
 
+    /// The app holds only write-only ("Add events only") calendar access.
+    /// Writes succeed but every read (get / list / search / update / delete)
+    /// returns nothing, because macOS forbids reading with this grant. Full
+    /// Access is required to read events back.
+    case calendarFullAccessRequired
+
     /// Reminders access was denied by the user.
     case remindersDenied
 
@@ -41,6 +47,8 @@ public enum PermissionError: Error, Sendable {
         switch self {
         case .calendarDenied:
             return "Calendar access denied. Please grant access in System Settings > Privacy & Security > Calendar."
+        case .calendarFullAccessRequired:
+            return "Full Access to Calendars is required to read events — current access is write-only ('Add events only') or not granted. Grant Full Access in System Settings > Privacy & Security > Calendars. For a Claude-launched server the entry is listed under Claude, not apple-bridge."
         case .remindersDenied:
             return "Reminders access denied. Please grant access in System Settings > Privacy & Security > Reminders."
         case .contactsDenied:

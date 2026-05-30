@@ -1,6 +1,10 @@
 import Foundation
 import Testing
 
+#if canImport(EventKit)
+import EventKit
+#endif
+
 /// Helper utilities for system tests that interact with real macOS services.
 ///
 /// System tests are opt-in because they:
@@ -31,6 +35,30 @@ enum SystemTestHelper {
     /// - Contacts access
     static var systemTestsEnabled: Bool {
         ProcessInfo.processInfo.environment["APPLE_BRIDGE_SYSTEM_TESTS"] == "1"
+    }
+
+    /// Returns true if the test runner holds **full** calendar access.
+    ///
+    /// Calendar round-trip tests need to read events back and to delete what
+    /// they create. Under macOS 14+ write-only ("Add events only") access,
+    /// writes succeed but reads — including the by-id lookup that `deleteEvent`
+    /// needs to find and remove the event — return nothing, so a create-test
+    /// run would leak an undeletable event. Gating on full access keeps those
+    /// tests from running (and leaking) until the grant is upgraded.
+    ///
+    /// Note: for a Claude-launched process the grant is attributed to the
+    /// responsible parent (Claude), so the System Settings entry to upgrade is
+    /// under Claude, not apple-bridge.
+    static var calendarFullAccess: Bool {
+        #if canImport(EventKit)
+        if #available(macOS 14.0, *) {
+            return EKEventStore.authorizationStatus(for: .event) == .fullAccess
+        } else {
+            return EKEventStore.authorizationStatus(for: .event) == .authorized
+        }
+        #else
+        return false
+        #endif
     }
 
     /// Returns true if manual QA environment is configured.

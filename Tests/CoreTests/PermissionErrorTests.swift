@@ -16,6 +16,13 @@ struct PermissionErrorTests {
         #expect(error.userMessage.contains("System Settings"))
     }
 
+    @Test func testCalendarFullAccessRequiredMessage() {
+        let error = PermissionError.calendarFullAccessRequired
+        #expect(error.userMessage.contains("Full Access"))
+        #expect(error.userMessage.contains("write-only"))
+        #expect(error.userMessage.contains("System Settings"))
+    }
+
     @Test func testContactsDeniedMessage() {
         let error = PermissionError.contactsDenied
         #expect(error.userMessage.contains("Contacts"))
@@ -45,6 +52,7 @@ struct PermissionErrorTests {
         // Compile-time check: can be passed across actor boundaries
         let errors: [PermissionError] = [
             .calendarDenied,
+            .calendarFullAccessRequired,
             .remindersDenied,
             .contactsDenied,
             .fullDiskAccessDenied(),

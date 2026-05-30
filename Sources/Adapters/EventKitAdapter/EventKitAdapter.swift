@@ -81,6 +81,8 @@ public actor EventKitAdapter: CalendarAdapterProtocol {
 
     public func fetchEvents(from: Date, to: Date, calendarId: String?) async throws -> [CalendarEventData] {
         #if canImport(EventKit)
+        try requireCalendarReadAccess()
+
         let calendars: [EKCalendar]?
         if let calId = calendarId {
             if let calendar = eventStore.calendar(withIdentifier: calId) {
@@ -113,6 +115,7 @@ public actor EventKitAdapter: CalendarAdapterProtocol {
 
     public func fetchEvent(id: String) async throws -> CalendarEventData {
         #if canImport(EventKit)
+        try requireCalendarReadAccess()
         guard let event = eventStore.event(withIdentifier: id) else {
             throw ValidationError.notFound(resource: "event", id: id)
         }
@@ -139,6 +142,11 @@ public actor EventKitAdapter: CalendarAdapterProtocol {
         notes: String?
     ) async throws -> String {
         #if canImport(EventKit)
+        // Creating needs at least write access. Write-only is fine (the
+        // create-only dispatcher path depends on it); only no/denied access is
+        // rejected — there `defaultCalendarForNewEvents` is nil and `save`
+        // fails with the opaque "No calendar has been set".
+        try requireCalendarWriteAccess()
         let event = EKEvent(eventStore: eventStore)
         event.title = title
         event.startDate = startDate
@@ -156,7 +164,7 @@ public actor EventKitAdapter: CalendarAdapterProtocol {
         event.location = location
         event.notes = notes
 
-        try eventStore.save(event, span: .thisEvent)
+        try eventStore.save(event, span: .thisEvent, commit: true)
         return event.eventIdentifier
         #else
         throw PermissionError.calendarDenied
@@ -172,6 +180,7 @@ public actor EventKitAdapter: CalendarAdapterProtocol {
         notes: String?
     ) async throws -> CalendarEventData {
         #if canImport(EventKit)
+        try requireCalendarReadAccess()
         guard let event = eventStore.event(withIdentifier: id) else {
             throw ValidationError.notFound(resource: "event", id: id)
         }
@@ -182,7 +191,7 @@ public actor EventKitAdapter: CalendarAdapterProtocol {
         if let loc = location { event.location = loc }
         if let n = notes { event.notes = n }
 
-        try eventStore.save(event, span: .thisEvent)
+        try eventStore.save(event, span: .thisEvent, commit: true)
 
         return CalendarEventData(
             id: event.eventIdentifier,
@@ -200,10 +209,11 @@ public actor EventKitAdapter: CalendarAdapterProtocol {
 
     public func deleteEvent(id: String) async throws {
         #if canImport(EventKit)
+        try requireCalendarReadAccess()
         guard let event = eventStore.event(withIdentifier: id) else {
             throw ValidationError.notFound(resource: "event", id: id)
         }
-        try eventStore.remove(event, span: .thisEvent)
+        try eventStore.remove(event, span: .thisEvent, commit: true)
         #else
         throw PermissionError.calendarDenied
         #endif
@@ -211,6 +221,7 @@ public actor EventKitAdapter: CalendarAdapterProtocol {
 
     public func openEvent(id: String) async throws {
         #if canImport(EventKit) && canImport(AppKit)
+        try requireCalendarReadAccess()
         guard eventStore.event(withIdentifier: id) != nil else {
             throw ValidationError.notFound(resource: "event", id: id)
         }
@@ -223,6 +234,54 @@ public actor EventKitAdapter: CalendarAdapterProtocol {
         throw PermissionError.calendarDenied
         #endif
     }
+
+    // MARK: - Calendar Read-Access Guard
+
+    #if canImport(EventKit)
+    /// Throws `calendarFullAccessRequired` unless the app holds **full** read
+    /// access to calendar events.
+    ///
+    /// Reads (`event(withIdentifier:)`, `events(matching:)`) and picking a
+    /// default calendar only work under full access. Every other state fails a
+    /// read in a way that is misleading without this guard:
+    ///   - `.writeOnly` (macOS 14+): reads return empty / "event not found".
+    ///   - `.notDetermined` / `.denied` / `.restricted`: reads return empty and
+    ///     `defaultCalendarForNewEvents` is nil ("No calendar has been set").
+    /// Surfacing one clear, actionable error in all these cases tells the caller
+    /// exactly what to fix.
+    ///
+    /// - Note: All calendar operations run inside this `actor`, so the store is
+    ///   accessed single-threaded-by-contract; this guard holds no state.
+    private func requireCalendarReadAccess() throws {
+        let status = EKEventStore.authorizationStatus(for: .event)
+        if #available(macOS 14.0, *) {
+            guard status == .fullAccess else {
+                throw PermissionError.calendarFullAccessRequired
+            }
+        } else {
+            guard status == .authorized else {
+                throw PermissionError.calendarFullAccessRequired
+            }
+        }
+    }
+
+    /// Throws unless the app can **write** events — full access OR write-only
+    /// ("Add events only"). Used by `createEvent`, whose write succeeds under a
+    /// write-only grant (the create-only dispatcher path relies on this). Only
+    /// `.notDetermined` / `.denied` / `.restricted` are rejected.
+    private func requireCalendarWriteAccess() throws {
+        let status = EKEventStore.authorizationStatus(for: .event)
+        if #available(macOS 14.0, *) {
+            guard status == .fullAccess || status == .writeOnly else {
+                throw PermissionError.calendarFullAccessRequired
+            }
+        } else {
+            guard status == .authorized else {
+                throw PermissionError.calendarFullAccessRequired
+            }
+        }
+    }
+    #endif
 
     // MARK: - Reminders Authorization
 

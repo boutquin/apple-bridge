@@ -20,11 +20,26 @@
     <string>13.0</string>
 
     <!-- Privacy Usage Descriptions -->
+    <!-- Legacy key (pre-macOS 14). Retained for macOS 13 compatibility. -->
     <key>NSCalendarsUsageDescription</key>
     <string>Apple Bridge needs access to your calendars to list, create, update, and delete calendar events on behalf of your AI assistant.</string>
 
+    <!-- macOS 14+ split-access keys. requestFullAccessToEvents() is auto-denied
+         (no prompt) unless NSCalendarsFullAccessUsageDescription is present, so
+         without this key the app is permanently capped at write-only and cannot
+         read events back. -->
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>Apple Bridge needs full access to your calendars to list, search, read, create, update, and delete calendar events on behalf of your AI assistant.</string>
+
+    <key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+    <string>Apple Bridge needs to add events to your calendars on behalf of your AI assistant.</string>
+
     <key>NSRemindersUsageDescription</key>
     <string>Apple Bridge needs access to your reminders to list, create, update, complete, and delete reminders on behalf of your AI assistant.</string>
+
+    <!-- macOS 14+ key for requestFullAccessToReminders(); same rationale as calendars. -->
+    <key>NSRemindersFullAccessUsageDescription</key>
+    <string>Apple Bridge needs full access to your reminders to list, read, create, update, complete, and delete reminders on behalf of your AI assistant.</string>
 
     <key>NSContactsUsageDescription</key>
     <string>Apple Bridge needs access to your contacts to search and retrieve contact information on behalf of your AI assistant.</string>
