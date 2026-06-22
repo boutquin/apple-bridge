@@ -26,7 +26,7 @@ struct ContactsHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("John Doe"))
             #expect(!text.contains("Jane Smith"))
         }
@@ -43,7 +43,7 @@ struct ContactsHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("query"))
         }
     }
@@ -63,7 +63,7 @@ struct ContactsHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("Test 1"))
         }
     }
@@ -84,7 +84,7 @@ struct ContactsHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("John Doe"))
             #expect(text.contains("john@example.com"))
         }
@@ -101,7 +101,7 @@ struct ContactsHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("id"))
         }
     }
@@ -118,7 +118,7 @@ struct ContactsHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("not found") || text.contains("Contact"))
         }
     }
@@ -139,7 +139,7 @@ struct ContactsHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("Pierre Boutquin"))
         }
     }
@@ -156,7 +156,7 @@ struct ContactsHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("null"))
         }
     }
@@ -177,7 +177,7 @@ struct ContactsHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("C1") || text.contains("opened"))
         }
     }
@@ -193,7 +193,7 @@ struct ContactsHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("id"))
         }
     }
@@ -210,7 +210,7 @@ struct ContactsHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("not found") || text.contains("Contact"))
         }
     }
@@ -229,7 +229,7 @@ struct ContactsHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("Contacts") || text.contains("permission") || text.contains("denied"))
         }
     }

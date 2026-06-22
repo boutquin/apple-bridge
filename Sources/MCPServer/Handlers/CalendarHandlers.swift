@@ -137,7 +137,7 @@ enum CalendarHandlers {
                 notes: notes
             )
             return CallTool.Result(
-                content: [.text("{\"id\": \"\(id)\"}")],
+                content: [.plain("{\"id\": \"\(id)\"}")],
                 isError: false
             )
         } catch {
@@ -192,7 +192,7 @@ enum CalendarHandlers {
         do {
             try await services.calendar.deleteEvent(id: id)
             return CallTool.Result(
-                content: [.text("{\"deleted\": true}")],
+                content: [.plain("{\"deleted\": true}")],
                 isError: false
             )
         } catch {

@@ -32,7 +32,7 @@ struct MessagesHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("John Doe"))
             #expect(content.contains("Jane Smith"))
         }
@@ -90,7 +90,7 @@ struct MessagesHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("Hello"))
         }
     }
@@ -106,7 +106,7 @@ struct MessagesHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("chatId"))
         }
     }
@@ -125,7 +125,7 @@ struct MessagesHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             // Should have Page structure with items, hasMore
             #expect(content.contains("items") || content.contains("Test"))
         }
@@ -148,7 +148,7 @@ struct MessagesHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("Unread message"))
         }
     }
@@ -201,7 +201,7 @@ struct MessagesHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("to"))
         }
     }
@@ -217,7 +217,7 @@ struct MessagesHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("body"))
         }
     }
@@ -236,7 +236,7 @@ struct MessagesHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("sent") || content.contains("true") || content.contains("+1234567890"))
         }
     }
@@ -282,7 +282,7 @@ struct MessagesHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("scheduledAt"))
         }
     }
@@ -301,7 +301,7 @@ struct MessagesHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("Full Disk Access") || content.contains("permission") || content.contains("Messages"))
         }
     }

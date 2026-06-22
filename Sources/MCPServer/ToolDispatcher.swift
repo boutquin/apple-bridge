@@ -55,7 +55,7 @@ public actor ToolDispatcher {
             return errorResult(for: error, toolName: name)
         } catch {
             return CallTool.Result(
-                content: [.text("INTERNAL_ERROR: Unexpected error executing '\(name)': \(error)")],
+                content: [.plain("INTERNAL_ERROR: Unexpected error executing '\(name)': \(error)")],
                 isError: true
             )
         }
@@ -83,6 +83,6 @@ public actor ToolDispatcher {
         case .internalError(let msg):
             message = "INTERNAL_ERROR: Tool '\(toolName)' failed: \(msg)"
         }
-        return CallTool.Result(content: [.text(message)], isError: true)
+        return CallTool.Result(content: [.plain(message)], isError: true)
     }
 }

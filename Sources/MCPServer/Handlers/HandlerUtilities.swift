@@ -74,10 +74,10 @@ enum HandlerUtilities {
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             let data = try encoder.encode(value)
             let json = String(data: data, encoding: .utf8) ?? "{}"
-            return CallTool.Result(content: [.text(json)], isError: false)
+            return CallTool.Result(content: [.plain(json)], isError: false)
         } catch {
             return CallTool.Result(
-                content: [.text("Error encoding result: \(error.localizedDescription)")],
+                content: [.plain("Error encoding result: \(error.localizedDescription)")],
                 isError: true
             )
         }
@@ -101,7 +101,7 @@ enum HandlerUtilities {
             message = error.localizedDescription
         }
         return CallTool.Result(
-            content: [.text("Error: \(message)")],
+            content: [.plain("Error: \(message)")],
             isError: true
         )
     }
@@ -111,7 +111,7 @@ enum HandlerUtilities {
     /// - Returns: A `CallTool.Result` with `isError: true`.
     static func missingRequiredParameter(_ name: String) -> CallTool.Result {
         CallTool.Result(
-            content: [.text("Missing required parameter: \(name)")],
+            content: [.plain("Missing required parameter: \(name)")],
             isError: true
         )
     }

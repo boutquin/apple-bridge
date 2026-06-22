@@ -90,7 +90,7 @@ public actor ToolRegistry {
     public func callTool(name: String, arguments: [String: Value]?) async -> CallTool.Result {
         guard let entry = tools[name] else {
             return CallTool.Result(
-                content: [.text("UNKNOWN_TOOL: '\(name)' is not a registered tool")],
+                content: [.plain("UNKNOWN_TOOL: '\(name)' is not a registered tool")],
                 isError: true
             )
         }
@@ -128,7 +128,7 @@ public actor ToolRegistry {
 
         let handler: ToolHandler = { _ in
             CallTool.Result(
-                content: [.text("NOT_IMPLEMENTED: '\(name)' handler not yet implemented")],
+                content: [.plain("NOT_IMPLEMENTED: '\(name)' handler not yet implemented")],
                 isError: true
             )
         }

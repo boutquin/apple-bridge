@@ -1,0 +1,13 @@
+# Normalize line endings
+* text=auto
+
+# Private/dev files: TRACKED on the private origin (apple-bridge.Dev), excluded from
+# `git archive` (the public squash-push to boutquin/apple-bridge). Replaces gitignoring specs/.
+specs/ export-ignore
+specs/** export-ignore
+CLAUDE.md export-ignore
+CLAUDE.local.md export-ignore
+.claude/ export-ignore
+.claude/** export-ignore
+sessions/ export-ignore
+sessions/** export-ignore

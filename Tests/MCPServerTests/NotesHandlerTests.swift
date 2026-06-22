@@ -61,7 +61,7 @@ struct NotesHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("Shopping List"))
             #expect(content.contains("note-1"))
         }
@@ -78,7 +78,7 @@ struct NotesHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("query"))
         }
     }
@@ -95,7 +95,7 @@ struct NotesHandlerTests {
 
         #expect(result.isError == false)
         // Default limit should return all 3 notes
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("items"))
         }
     }
@@ -132,7 +132,7 @@ struct NotesHandlerTests {
         )
 
         #expect(resultWithBody.isError == false)
-        if case .text(let contentWithBody) = resultWithBody.content.first {
+        if case .text(let contentWithBody, _, _) = resultWithBody.content.first {
             #expect(contentWithBody.contains("Milk"))
         }
 
@@ -146,7 +146,7 @@ struct NotesHandlerTests {
         )
 
         #expect(resultWithoutBody.isError == false)
-        if case .text(let contentWithoutBody) = resultWithoutBody.content.first {
+        if case .text(let contentWithoutBody, _, _) = resultWithoutBody.content.first {
             // Body should be omitted when includeBody is false (Swift's JSONEncoder skips nil values)
             #expect(!contentWithoutBody.contains("\"body\""))
         }
@@ -163,7 +163,7 @@ struct NotesHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("\"items\" : ["))
             #expect(content.contains("\"hasMore\" : false"))
         }
@@ -182,7 +182,7 @@ struct NotesHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("note-1"))
             #expect(content.contains("Shopping List"))
             #expect(content.contains("Milk, eggs, bread"))
@@ -200,7 +200,7 @@ struct NotesHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("id"))
         }
     }
@@ -216,7 +216,7 @@ struct NotesHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("Note"))
         }
     }
@@ -237,7 +237,7 @@ struct NotesHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             // Should return the created note ID
             #expect(content.contains("id"))
         }
@@ -256,7 +256,7 @@ struct NotesHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("title"))
         }
     }
@@ -304,7 +304,7 @@ struct NotesHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("opened"))
         }
     }
@@ -320,7 +320,7 @@ struct NotesHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("id"))
         }
     }
@@ -336,7 +336,7 @@ struct NotesHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("Note"))
         }
     }
@@ -368,7 +368,7 @@ struct NotesHandlerTests {
             name: "notes_search",
             arguments: ["query": .string("test")]
         )
-        if case .text(let searchContent) = searchResult.content.first {
+        if case .text(let searchContent, _, _) = searchResult.content.first {
             #expect(!searchContent.contains("NOT_IMPLEMENTED"))
         }
 
@@ -377,7 +377,7 @@ struct NotesHandlerTests {
             name: "notes_get",
             arguments: ["id": .string("note-1")]
         )
-        if case .text(let getContent) = getResult.content.first {
+        if case .text(let getContent, _, _) = getResult.content.first {
             #expect(!getContent.contains("NOT_IMPLEMENTED"))
         }
     }
@@ -396,7 +396,7 @@ struct NotesHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("Full Disk Access") || content.contains("Permission"))
         }
     }

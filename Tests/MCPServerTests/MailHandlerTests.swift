@@ -33,7 +33,7 @@ struct MailHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("Meeting"))
         }
     }
@@ -49,7 +49,7 @@ struct MailHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("query"))
         }
     }
@@ -84,7 +84,7 @@ struct MailHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("body") || content.contains("Email body content"))
         }
     }
@@ -107,7 +107,7 @@ struct MailHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("Unread"))
         }
     }
@@ -226,7 +226,7 @@ struct MailHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("to"))
         }
     }
@@ -245,7 +245,7 @@ struct MailHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("subject"))
         }
     }
@@ -264,7 +264,7 @@ struct MailHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("body"))
         }
     }
@@ -284,7 +284,7 @@ struct MailHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("sent") || content.contains("true"))
         }
     }
@@ -344,7 +344,7 @@ struct MailHandlerTests {
         )
 
         #expect(result.isError == false)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("compose") || content.contains("opened") || content.contains("true"))
         }
     }
@@ -363,7 +363,7 @@ struct MailHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("Error") || content.contains("Mail"))
         }
     }
@@ -380,7 +380,7 @@ struct MailHandlerTests {
         )
 
         #expect(result.isError == true)
-        if case .text(let content) = result.content.first {
+        if case .text(let content, _, _) = result.content.first {
             #expect(content.contains("Error") || content.contains("timeout"))
         }
     }

@@ -35,7 +35,7 @@ struct RemindersHandlerTests {
         let result = await registry.callTool(name: "reminders_get_lists", arguments: nil)
 
         #expect(result.isError == false)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("Personal") || text.contains("Work") || text.contains("L1"))
         }
     }
@@ -53,7 +53,7 @@ struct RemindersHandlerTests {
         ])
 
         #expect(result.isError == false)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("Buy milk") || text.contains("Call mom") || text.contains("R1"))
         }
     }
@@ -82,7 +82,7 @@ struct RemindersHandlerTests {
         let result = await registry.callTool(name: "reminders_list", arguments: ["limit": .int(10)])
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("listId") || text.contains("required") || text.contains("Missing"))
         }
     }
@@ -100,7 +100,7 @@ struct RemindersHandlerTests {
         ])
 
         #expect(result.isError == false)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("milk") || text.contains("Buy"))
         }
     }
@@ -113,7 +113,7 @@ struct RemindersHandlerTests {
         let result = await registry.callTool(name: "reminders_search", arguments: ["limit": .int(10)])
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("query") || text.contains("required") || text.contains("Missing"))
         }
     }
@@ -134,7 +134,7 @@ struct RemindersHandlerTests {
 
         #expect(result.isError == false)
         // Should return the created reminder ID
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(!text.isEmpty)
         }
 
@@ -154,7 +154,7 @@ struct RemindersHandlerTests {
         ])
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("title") || text.contains("required") || text.contains("Missing"))
         }
     }
@@ -173,7 +173,7 @@ struct RemindersHandlerTests {
         ])
 
         #expect(result.isError == false)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("Updated") || text.contains("R1"))
         }
     }
@@ -201,7 +201,7 @@ struct RemindersHandlerTests {
         ])
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("not found") || text.contains("Error"))
         }
     }
@@ -241,7 +241,7 @@ struct RemindersHandlerTests {
         let result = await registry.callTool(name: "reminders_complete", arguments: ["id": .string("R1")])
 
         #expect(result.isError == false)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("true") || text.contains("completed") || text.contains("isCompleted"))
         }
     }
@@ -308,7 +308,7 @@ struct RemindersHandlerTests {
 
         // Get lists should work (not return NOT_IMPLEMENTED)
         let listResult = await registry.callTool(name: "reminders_get_lists", arguments: nil)
-        if case .text(let text) = listResult.content.first {
+        if case .text(let text, _, _) = listResult.content.first {
             #expect(!text.contains("NOT_IMPLEMENTED"))
         }
 
@@ -317,7 +317,7 @@ struct RemindersHandlerTests {
             "query": .string("milk"),
             "limit": .int(10)
         ])
-        if case .text(let text) = searchResult.content.first {
+        if case .text(let text, _, _) = searchResult.content.first {
             #expect(!text.contains("NOT_IMPLEMENTED"))
         }
     }

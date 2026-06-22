@@ -1,7 +1,9 @@
 # Swift Package Manager
 .build/
 .swiftpm/
-Package.resolved
+# Package.resolved is COMMITTED (executable app) — pins exact dependency versions so
+# CI builds what you build locally. An uncommitted lockfile let swift-sdk float from
+# 0.10.x to 0.12.x and broke CI; the lockfile + .upToNextMinor pin prevent that.
 
 # Xcode
 *.xcodeproj/
@@ -34,5 +36,5 @@ DerivedData/
 # Claude Code session logs (private workspace)
 sessions/
 
-# Specs (dev-team only — feature specs, chores, roadmaps)
-specs/
+# Specs are TRACKED on the private origin (apple-bridge.Dev); kept out of the public
+# repo's release archive via .gitattributes `specs/ export-ignore` — not gitignored.

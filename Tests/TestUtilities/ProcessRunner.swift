@@ -22,6 +22,24 @@ import Foundation
 /// 2. `BUILD_DIR` (Swift Package Manager)
 /// 3. Common relative paths (`.build/debug/`, `.build/release/`)
 /// 4. System PATH via `/usr/bin/which`
+/// Thread-safe accumulator for pipe output collected via `readabilityHandler`.
+private final class OutputBuffer: @unchecked Sendable {
+    private let lock = NSLock()
+    private var data = Data()
+    private var lastAppend = Date.distantPast
+
+    func append(_ chunk: Data) {
+        lock.lock(); defer { lock.unlock() }
+        data.append(chunk)
+        lastAppend = Date()
+    }
+
+    var snapshot: (data: Data, last: Date) {
+        lock.lock(); defer { lock.unlock() }
+        return (data, lastAppend)
+    }
+}
+
 public enum ProcessRunner {
 
     // MARK: - Constants
@@ -32,12 +50,17 @@ public enum ProcessRunner {
     /// Poll interval when waiting for process completion.
     private static let pollInterval: Duration = .milliseconds(50)
 
-    /// Standard initialize message for MCP protocol handshake.
+    /// Standard initialize handshake for the MCP protocol: the `initialize`
+    /// request followed by the `notifications/initialized` notification.
     ///
-    /// Use this constant to avoid duplicating the JSON-RPC initialize message
-    /// across multiple tests.
+    /// swift-sdk 0.12 enforces the spec lifecycle — the server responds to
+    /// `initialize` but ignores subsequent requests (`tools/list`, tool calls)
+    /// until it receives `notifications/initialized`. Sending both here means
+    /// every test that prefixes its requests with this constant completes the
+    /// handshake before issuing real calls.
     public static let initializeMessage = """
     {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}
+    {"jsonrpc":"2.0","method":"notifications/initialized"}
     """
 
     // MARK: - Public Methods
@@ -69,9 +92,27 @@ public enum ProcessRunner {
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
 
+        // Accumulate output in the background. We can't use readDataToEndOfFile()
+        // because we keep stdin open (see below), so the process never reaches EOF
+        // on its own.
+        let outBuf = OutputBuffer()
+        let errBuf = OutputBuffer()
+        stdoutPipe.fileHandleForReading.readabilityHandler = { handle in
+            let chunk = handle.availableData
+            if !chunk.isEmpty { outBuf.append(chunk) }
+        }
+        stderrPipe.fileHandleForReading.readabilityHandler = { handle in
+            let chunk = handle.availableData
+            if !chunk.isEmpty { errBuf.append(chunk) }
+        }
+
         try process.run()
 
-        // Write input to stdin, adding newlines between messages
+        // Write input, adding newlines between messages, and KEEP STDIN OPEN.
+        // Under MCP swift-sdk 0.12 the server handles each request in a detached
+        // task and tears down its receive loop on stdin EOF — closing stdin here
+        // would let the process exit before those responses flush to stdout. We
+        // keep stdin open, wait for output to settle, then terminate.
         let inputWithNewlines = input
             .split(separator: "\n", omittingEmptySubsequences: true)
             .joined(separator: "\n") + "\n"
@@ -80,26 +121,27 @@ public enum ProcessRunner {
             try stdinPipe.fileHandleForWriting.write(contentsOf: inputData)
         }
 
-        // Close stdin to signal EOF
-        try stdinPipe.fileHandleForWriting.close()
-
-        // Wait for output with timeout
+        // Wait until output settles (no new bytes for `quietPeriod` after some
+        // output arrived), the process exits on its own, or the timeout elapses.
         let startTime = Date()
-
-        while process.isRunning {
-            if Date().timeIntervalSince(startTime) > defaultTimeout {
-                process.terminate()
-                throw ProcessRunnerError.timeout
-            }
+        let quietPeriod: TimeInterval = 0.4
+        while Date().timeIntervalSince(startTime) < defaultTimeout {
             try await Task.sleep(for: pollInterval)
+            if !process.isRunning { break }
+            let (data, last) = outBuf.snapshot
+            if !data.isEmpty, Date().timeIntervalSince(last) > quietPeriod { break }
         }
 
-        // Read all output
-        let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-        let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+        // Signal EOF and stop the server, then give any final write a moment.
+        try? stdinPipe.fileHandleForWriting.close()
+        if process.isRunning { process.terminate() }
+        try? await Task.sleep(for: .milliseconds(80))
 
-        let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
-        let stderr = String(data: stderrData, encoding: .utf8) ?? ""
+        stdoutPipe.fileHandleForReading.readabilityHandler = nil
+        stderrPipe.fileHandleForReading.readabilityHandler = nil
+
+        let stdout = String(data: outBuf.snapshot.data, encoding: .utf8) ?? ""
+        let stderr = String(data: errBuf.snapshot.data, encoding: .utf8) ?? ""
 
         return (stdout, stderr)
     }

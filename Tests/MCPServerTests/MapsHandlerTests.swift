@@ -23,7 +23,7 @@ struct MapsHandlerTests {
 
         #expect(result.isError == false)
         let content = try #require(result.content.first)
-        if case .text(let json) = content {
+        if case .text(let json, _, _) = content {
             #expect(json.contains("Apple Park"))
         } else {
             Issue.record("Expected text content")
@@ -40,7 +40,7 @@ struct MapsHandlerTests {
 
         #expect(result.isError == true)
         let content = try #require(result.content.first)
-        if case .text(let text) = content {
+        if case .text(let text, _, _) = content {
             #expect(text.contains("query"))
         }
     }
@@ -92,7 +92,7 @@ struct MapsHandlerTests {
 
         #expect(result.isError == false)
         let content = try #require(result.content.first)
-        if case .text(let json) = content {
+        if case .text(let json, _, _) = content {
             #expect(json.contains("Highway 101"))
         }
     }
@@ -186,7 +186,7 @@ struct MapsHandlerTests {
 
         #expect(result.isError == false)
         let content = try #require(result.content.first)
-        if case .text(let json) = content {
+        if case .text(let json, _, _) = content {
             #expect(json.contains("Starbucks"))
         }
     }

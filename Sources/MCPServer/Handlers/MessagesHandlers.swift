@@ -129,7 +129,7 @@ enum MessagesHandlers {
 
             // Return success confirmation
             return CallTool.Result(
-                content: [.text("{\"sent\": true, \"to\": \"\(to)\"}")],
+                content: [.plain("{\"sent\": true, \"to\": \"\(to)\"}")],
                 isError: false
             )
         } catch {
@@ -169,7 +169,7 @@ enum MessagesHandlers {
 
             // Return success confirmation
             return CallTool.Result(
-                content: [.text("{\"scheduled\": true, \"to\": \"\(to)\", \"scheduledAt\": \"\(scheduledAt)\"}")],
+                content: [.plain("{\"scheduled\": true, \"to\": \"\(to)\", \"scheduledAt\": \"\(scheduledAt)\"}")],
                 isError: false
             )
         } catch {

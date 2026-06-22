@@ -31,7 +31,7 @@ struct CalendarHandlerTests {
 
         #expect(result.isError == false)
         // Result should contain event data
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("Meeting") || text.contains("events"))
         }
     }
@@ -77,7 +77,7 @@ struct CalendarHandlerTests {
         ])
 
         #expect(result.isError == false)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("Meeting"))
         }
     }
@@ -90,7 +90,7 @@ struct CalendarHandlerTests {
         let result = await registry.callTool(name: "calendar_search", arguments: ["limit": .int(10)])
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("query") || text.contains("required") || text.contains("Missing"))
         }
     }
@@ -105,7 +105,7 @@ struct CalendarHandlerTests {
         let result = await registry.callTool(name: "calendar_get", arguments: ["id": .string("E1")])
 
         #expect(result.isError == false)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("Meeting") || text.contains("E1"))
         }
     }
@@ -128,7 +128,7 @@ struct CalendarHandlerTests {
         let result = await registry.callTool(name: "calendar_get", arguments: ["id": .string("nonexistent")])
 
         #expect(result.isError == true)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("not found") || text.contains("Error"))
         }
     }
@@ -150,7 +150,7 @@ struct CalendarHandlerTests {
 
         #expect(result.isError == false)
         // Should return the created event ID
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(!text.isEmpty)
         }
 
@@ -187,7 +187,7 @@ struct CalendarHandlerTests {
         ])
 
         #expect(result.isError == false)
-        if case .text(let text) = result.content.first {
+        if case .text(let text, _, _) = result.content.first {
             #expect(text.contains("Updated") || text.contains("E1"))
         }
     }
@@ -254,13 +254,13 @@ struct CalendarHandlerTests {
 
         // List should work (not return NOT_IMPLEMENTED)
         let listResult = await registry.callTool(name: "calendar_list", arguments: ["limit": .int(10)])
-        if case .text(let text) = listResult.content.first {
+        if case .text(let text, _, _) = listResult.content.first {
             #expect(!text.contains("NOT_IMPLEMENTED"))
         }
 
         // Get should work
         let getResult = await registry.callTool(name: "calendar_get", arguments: ["id": .string("E1")])
-        if case .text(let text) = getResult.content.first {
+        if case .text(let text, _, _) = getResult.content.first {
             #expect(!text.contains("NOT_IMPLEMENTED"))
         }
     }

@@ -19,7 +19,7 @@ struct ToolDispatcherTests {
         #expect(result.isError == true)
 
         let hasUnknownToolError = result.content.contains { content in
-            if case .text(let text) = content {
+            if case .text(let text, _, _) = content {
                 return text.contains("UNKNOWN_TOOL")
             }
             return false
@@ -41,7 +41,7 @@ struct ToolDispatcherTests {
 
         // Verify it's NOT a NOT_IMPLEMENTED error (tool is now implemented)
         let hasNotImplemented = result.content.contains { content in
-            if case .text(let text) = content {
+            if case .text(let text, _, _) = content {
                 return text.contains("NOT_IMPLEMENTED")
             }
             return false
@@ -50,7 +50,7 @@ struct ToolDispatcherTests {
 
         // Verify it returns the expected missing parameter error
         let hasMissingParam = result.content.contains { content in
-            if case .text(let text) = content {
+            if case .text(let text, _, _) = content {
                 return text.contains("query") || text.contains("Missing")
             }
             return false
@@ -69,7 +69,7 @@ struct ToolDispatcherTests {
         await registry.setHandler(for: "calendar_list") { _ in
             // Sleep for 2 seconds
             try? await Task.sleep(for: .seconds(2))
-            return CallTool.Result(content: [.text("Success")], isError: false)
+            return CallTool.Result(content: [.plain("Success")], isError: false)
         }
 
         // Create dispatcher with 100ms timeout
@@ -80,7 +80,7 @@ struct ToolDispatcherTests {
         #expect(result.isError == true)
 
         let hasTimeoutError = result.content.contains { content in
-            if case .text(let text) = content {
+            if case .text(let text, _, _) = content {
                 return text.contains("TIMEOUT") || text.contains("timed out")
             }
             return false
@@ -95,7 +95,7 @@ struct ToolDispatcherTests {
 
         // Set a fast handler
         await registry.setHandler(for: "calendar_list") { _ in
-            CallTool.Result(content: [.text("Fast response")], isError: false)
+            CallTool.Result(content: [.plain("Fast response")], isError: false)
         }
 
         let dispatcher = ToolDispatcher(registry: registry, timeout: .seconds(5))
@@ -105,7 +105,7 @@ struct ToolDispatcherTests {
         #expect(result.isError == false)
 
         let hasExpectedContent = result.content.contains { content in
-            if case .text(let text) = content {
+            if case .text(let text, _, _) = content {
                 return text.contains("Fast response")
             }
             return false
@@ -131,7 +131,7 @@ struct ToolDispatcherTests {
 
         await registry.setHandler(for: "calendar_search") { args in
             await capture.capture(args)
-            return CallTool.Result(content: [.text("OK")], isError: false)
+            return CallTool.Result(content: [.plain("OK")], isError: false)
         }
 
         let dispatcher = ToolDispatcher(registry: registry)

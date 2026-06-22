@@ -42,7 +42,7 @@ struct ToolRegistryTests {
 
         // Check that the error is for missing parameter, NOT for unimplemented tool
         let hasNotImplemented = result.content.contains { content in
-            if case .text(let text) = content {
+            if case .text(let text, _, _) = content {
                 return text.contains("NOT_IMPLEMENTED")
             }
             return false
@@ -51,7 +51,7 @@ struct ToolRegistryTests {
 
         // Verify it's the expected missing parameter error
         let hasMissingParam = result.content.contains { content in
-            if case .text(let text) = content {
+            if case .text(let text, _, _) = content {
                 return text.contains("query") || text.contains("Missing")
             }
             return false
@@ -210,7 +210,7 @@ struct ToolRegistryTests {
         #expect(result.isError == true)
 
         let hasUnknownToolError = result.content.contains { content in
-            if case .text(let text) = content {
+            if case .text(let text, _, _) = content {
                 return text.contains("UNKNOWN_TOOL") || text.contains("unknown")
             }
             return false

@@ -79,7 +79,7 @@ enum ContactsHandlers {
             if let contact {
                 return HandlerUtilities.successResult(contact)
             } else {
-                return CallTool.Result(content: [.text("null")], isError: false)
+                return CallTool.Result(content: [.plain("null")], isError: false)
             }
         } catch {
             return HandlerUtilities.errorResult(error)
@@ -103,7 +103,7 @@ enum ContactsHandlers {
         do {
             try await services.contacts.open(id: id)
             return CallTool.Result(
-                content: [.text("{\"opened\": \"\(id)\"}")],
+                content: [.plain("{\"opened\": \"\(id)\"}")],
                 isError: false
             )
         } catch {

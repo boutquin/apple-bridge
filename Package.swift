@@ -5,7 +5,7 @@ let package = Package(
     name: "apple-bridge",
     platforms: [.macOS(.v13)],
     dependencies: [
-        .package(url: "https://github.com/modelcontextprotocol/swift-sdk", from: "0.10.0")
+        .package(url: "https://github.com/modelcontextprotocol/swift-sdk", .upToNextMinor(from: "0.12.1"))
     ],
     targets: [
         .executableTarget(

@@ -130,7 +130,7 @@ enum RemindersHandlers {
                 priority: priority
             )
             return CallTool.Result(
-                content: [.text("{\"id\": \"\(id)\"}")],
+                content: [.plain("{\"id\": \"\(id)\"}")],
                 isError: false
             )
         } catch {
@@ -185,7 +185,7 @@ enum RemindersHandlers {
         do {
             try await services.reminders.delete(id: id)
             return CallTool.Result(
-                content: [.text("{\"deleted\": true}")],
+                content: [.plain("{\"deleted\": true}")],
                 isError: false
             )
         } catch {
@@ -232,7 +232,7 @@ enum RemindersHandlers {
         do {
             try await services.reminders.open(id: id)
             return CallTool.Result(
-                content: [.text("{\"opened\": true}")],
+                content: [.plain("{\"opened\": true}")],
                 isError: false
             )
         } catch {
