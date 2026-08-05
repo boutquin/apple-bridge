@@ -11,3 +11,11 @@ CLAUDE.local.md export-ignore
 .claude/** export-ignore
 sessions/ export-ignore
 sessions/** export-ignore
+
+# The release workflow is dev-only. Releases are cut HERE (where the Developer ID
+# secrets live) and the signed artifact is uploaded to the public mirror by the
+# job's last step. On the mirror this file would be actively harmful: with no
+# signing secrets it would publish an ad-hoc binary, and its final step would try
+# to push that binary to the mirror from the mirror. ci.yml is deliberately NOT
+# excluded — the public repo should still build and test on its own.
+.github/workflows/release.yml export-ignore
