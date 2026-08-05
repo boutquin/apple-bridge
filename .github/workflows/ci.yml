@@ -12,33 +12,67 @@ concurrency:
 
 jobs:
   build-and-test:
-    name: Build & Test
-    runs-on: macos-15
+    # Runs on both the pinned image and whatever is currently newest. An
+    # uncommitted lockfile once let swift-sdk float from 0.10.x to 0.12.x and
+    # broke CI; the symmetric risk is a toolchain divergence between the dev
+    # machine and a single pinned runner. Testing both ends catches it.
+    #
+    # macos-latest is deliberate rather than a hard-pinned newest label: the
+    # label set changes over time, and `latest` cannot go stale or 404.
+    name: Build & Test (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-latest]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Build (Debug)
-        run: swift build
+      - name: Report toolchain
+        run: swift --version
+
+      # Keyed on Package.resolved so the cache invalidates exactly when the
+      # dependency graph changes, and on the Swift version so two runner images
+      # never share incompatible build artifacts.
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+          key: spm-${{ matrix.runner }}-${{ hashFiles('Package.resolved') }}-${{ hashFiles('**/.swift-version') }}-${{ hashFiles('Package.swift') }}
+          restore-keys: |
+            spm-${{ matrix.runner }}-${{ hashFiles('Package.resolved') }}-
+            spm-${{ matrix.runner }}-
+
+      # The warning gate reuses THIS build's output. It used to run a third full
+      # `swift build` purely to grep its log, which on a cold cache doubled the
+      # job's compile time to check something the first build already knew.
+      - name: Build (Debug) + warning gate
+        run: |
+          set -o pipefail
+          swift build 2>&1 | tee build-output.txt
+          if grep -q "warning:" build-output.txt; then
+            echo "::error::Build produced warnings"
+            grep "warning:" build-output.txt
+            exit 1
+          fi
 
       - name: Build (Release)
         run: swift build -c release
 
+      # System tests (APPLE_BRIDGE_SYSTEM_TESTS=1) are intentionally NOT run
+      # here: they require real TCC grants for Calendar/Reminders and a signed-in
+      # user session, neither of which exists on a hosted runner. Their suites
+      # self-skip when the grant is absent, so this is a clean skip, not a hole.
       - name: Run Tests
         run: swift test
 
-      - name: Verify No Warnings
-        run: |
-          swift build 2>&1 | tee build-output.txt
-          if grep -q "warning:" build-output.txt; then
-            echo "::error::Build produced warnings"
-            exit 1
-          fi
-
   lint:
     name: Lint
-    runs-on: macos-15
+    runs-on: macos-latest
 
     steps:
       - name: Checkout

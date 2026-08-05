@@ -4,17 +4,17 @@ A Swift 6 MCP (Model Context Protocol) server that provides AI assistants with a
 
 ## Features
 
-Apple Bridge exposes 7 macOS domains through MCP tools:
+Apple Bridge exposes 7 macOS domains through 35 MCP tools:
 
 | Domain | Tools | Access Method |
 |--------|-------|---------------|
-| **Calendar** | `calendar_list`, `calendar_create`, `calendar_update`, `calendar_delete` | EventKit |
-| **Reminders** | `reminders_list`, `reminders_create`, `reminders_update`, `reminders_complete`, `reminders_delete` | EventKit |
-| **Contacts** | `contacts_search`, `contacts_me` | AppleScript |
-| **Notes** | `notes_search`, `notes_list`, `notes_create` | AppleScript |
-| **Messages** | `messages_read`, `messages_send`, `messages_unread` | AppleScript (partial) |
-| **Mail** | `mail_search`, `mail_unread`, `mail_send` | AppleScript |
-| **Maps** | `maps_search`, `maps_nearby`, `maps_directions`, `maps_open` | MapKit |
+| **Reminders** (8) | `reminders_list`, `reminders_get_lists`, `reminders_search`, `reminders_create`, `reminders_update`, `reminders_complete`, `reminders_delete`, `reminders_open` | EventKit |
+| **Calendar** (6) | `calendar_list`, `calendar_get`, `calendar_search`, `calendar_create`, `calendar_update`, `calendar_delete` | EventKit |
+| **Messages** (5) | `messages_read`, `messages_unread`, `messages_list_chats`, `messages_send`, `messages_schedule` | AppleScript (partial) |
+| **Contacts** (4) | `contacts_search`, `contacts_get`, `contacts_me`, `contacts_open` | AppleScript |
+| **Notes** (4) | `notes_search`, `notes_get`, `notes_create`, `notes_open` | AppleScript |
+| **Mail** (4) | `mail_search`, `mail_unread`, `mail_send`, `mail_compose` | AppleScript |
+| **Maps** (4) | `maps_search`, `maps_nearby`, `maps_directions`, `maps_open` | MapKit |
 
 ## Requirements
 
@@ -48,6 +48,93 @@ Apple Bridge requires various macOS permissions depending on which domains you u
 | **Location Services** | Maps domain | System Settings → Privacy & Security → Location Services |
 
 > **Note:** Messages read/unread requires Full Disk Access because the Messages.app scripting dictionary does not expose individual messages. All other AppleScript domains (Contacts, Notes, Messages chats/send, Mail) only need Automation permission.
+
+### Granting permissions when launched by an MCP host (Claude, etc.)
+
+Apple Bridge is normally launched as a **child process of an MCP host**, and that changes where the
+permissions live. Everything below was verified on macOS 15 with Claude Desktop on 2026-08-05.
+
+**1. Grant to the host app, not to `apple-bridge`.** The binary is ad-hoc/linker-signed
+(`TeamIdentifier=not set`), so it has no TCC identity of its own and **never appears in System
+Settings under its own name**. macOS attributes its requests to the *responsible process* — the host
+app at the top of the ancestry chain:
+
+```
+apple-bridge → claude (com.anthropic.claude-code) → disclaimer → /Applications/Claude.app
+```
+
+So the row to change is **Claude**. Looking for an "apple-bridge" row and concluding the permission
+is ungrantable is the most common failure here.
+
+**2. Calendars is a dropdown, not a checkbox.** It defaults to **"Add Events Only"**, which silently
+permits `calendar_create` while failing *every read* with `Full Access to Calendars is required to
+read events`. Set it to **"Full Access"**. That write-succeeds/read-fails split is easy to misread as
+a bug in the bridge.
+
+**3. The row only appears after the first request.** The Calendars/Reminders panes have no "+" button
+— rows are created when an app first asks. If the host app is absent from the pane, trigger any
+calendar or reminder tool once, then look again.
+
+**4. No prompt does not mean no access.** Host apps that don't declare
+`NSCalendarsFullAccessUsageDescription` / `NSRemindersFullAccessUsageDescription` will never show a
+permission dialog. The Settings row still works — grant it manually.
+
+**5. A new grant does not reach a running bridge — but you needn't restart the host.** EventKit
+caches its authorization verdict at the first request in a process. After changing a setting:
+
+```bash
+pkill -f apple-bridge
+```
+
+The MCP host respawns the bridge lazily on the next tool call, and the fresh process re-queries TCC.
+Note one bridge process runs **per host session**; killing one leaves the others on their stale
+cached verdict until they respawn too.
+
+**6. AppleScript-backed domains need the target app running.** Contacts, Notes, Messages, and Mail
+are driven via `osascript`, which does **not** auto-launch its target. If the app is closed, the
+underlying `-600 "Application isn't running"` currently surfaces as an opaque
+`Core.AppleScriptError error 0`. Launch the app (`open -g -a Contacts`) and retry.
+
+### Code signing
+
+`scripts/install.sh` signs every install ad-hoc, which requires no certificate
+and binds the embedded `Info.plist` into the signature (SwiftPM's linker-signed
+output leaves it unbound, so the privacy usage strings are not covered).
+
+To sign with a Developer ID for distribution to other Macs:
+
+```bash
+APPLE_BRIDGE_SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" ./scripts/install.sh
+```
+
+Signing does **not** affect permissions — see [docs/code-signing.md](docs/code-signing.md)
+for the certificate, notarization, and what signing does and does not fix.
+
+### Known limitation — AppleScript `whose` searches on large stores
+
+`mail_search` and `notes_search` build AppleScript `whose` queries, which the target app evaluates
+with per-item Apple Event round-trips. The cost scales with the store size *and* with how many items
+match, so a broad query over a large library cannot finish inside a typical 30-second MCP tool
+timeout. Measured on one machine, 2026-08-05:
+
+| Query | Store size | Result |
+|---|---|---|
+| `mail_search` | ~233,000 messages | times out reliably |
+| `notes_search` for `"a"` (matched 1,427 of 2,120) | 2,120 notes | **56 s** via plain `osascript` — over the limit |
+| `notes_search` for a specific term | 2,120 notes | returns promptly |
+
+**A timeout here is a scale problem, not a permissions problem** — `mail_unread` and narrow
+`notes_search` queries succeed over the identical Automation pathway. Prefer specific search terms,
+and use an IMAP-based client for search on very large mailboxes.
+
+### Known limitation — Messages needs Full Disk Access
+
+`messages_read` / `messages_unread` read the Messages SQLite database directly, because Messages.app's
+AppleScript dictionary does not expose individual messages. That requires **Full Disk Access**
+(System Settings → Privacy & Security → Full Disk Access), granted to the responsible parent app —
+the same attribution rule as above. Without it these two tools return an explicit Full-Disk-Access
+error rather than an empty result. `messages_send`, `messages_schedule`, and `messages_list_chats`
+use AppleScript and need only Automation.
 
 ## Usage with Claude Desktop
 

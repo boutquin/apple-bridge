@@ -8,10 +8,12 @@
     <string>Apple Bridge</string>
     <key>CFBundleDisplayName</key>
     <string>Apple Bridge</string>
+    <!-- Keep both in sync with AppleBridgeVersion.current (Sources/Core/Version.swift).
+         VersionTests fails the build if they drift. -->
     <key>CFBundleVersion</key>
-    <string>1.0.0</string>
+    <string>3.0.15</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>3.0.15</string>
     <key>CFBundleExecutable</key>
     <string>apple-bridge</string>
     <key>CFBundlePackageType</key>

@@ -5,7 +5,11 @@ import Adapters
 import MCPServer
 
 /// The apple-bridge MCP server version.
-let serverVersion = "3.0.15"
+///
+/// Defined in `Core` (`AppleBridgeVersion`) so the value has exactly one home:
+/// `Info.plist` is checked against it by `VersionTests`, which is what keeps the
+/// handshake version and the embedded bundle version from drifting apart.
+let serverVersion = AppleBridgeVersion.current
 
 /// Global reference to the server for signal handling.
 /// This is necessary because C signal handlers cannot capture Swift closures.

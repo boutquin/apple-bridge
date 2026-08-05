@@ -1,0 +1,231 @@
+name: Release
+
+# Fires on a version tag. The tag is the trigger and the source of the version
+# number; `AppleBridgeVersion.current` (Sources/Core/Version.swift) is the
+# source of truth for the number itself, and the verify step below refuses to
+# publish if the two disagree — a mismatched tag is the easiest release mistake
+# to make and the most confusing to debug afterwards.
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Publish
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Report toolchain
+        run: swift --version
+
+      - name: Verify tag matches AppleBridgeVersion.current
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          SRC=$(grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' Sources/Core/Version.swift | tr -d '"' | head -1)
+          echo "tag=$TAG source=$SRC"
+          if [ "$TAG" != "$SRC" ]; then
+            echo "::error::Tag v$TAG does not match AppleBridgeVersion.current ($SRC)."
+            exit 1
+          fi
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+          key: spm-release-${{ hashFiles('Package.resolved') }}-${{ hashFiles('Package.swift') }}
+          restore-keys: |
+            spm-release-${{ hashFiles('Package.resolved') }}-
+            spm-release-
+
+      # Tests gate the release. A tag that cannot pass its own suite should not
+      # produce a downloadable binary.
+      - name: Run Tests
+        run: swift test
+
+      - name: Build (Release)
+        run: swift build -c release
+
+      # Which signing path this release takes is decided here and ANNOUNCED, never
+      # inferred silently. A release that quietly degrades to ad-hoc because a
+      # secret expired is the failure mode worth engineering against: the artifact
+      # looks fine and Gatekeeper rejects it on the user's machine.
+      - name: Determine signing mode
+        id: signing
+        env:
+          CERT: ${{ secrets.MACOS_CERTIFICATE }}
+        run: |
+          if [ -n "$CERT" ]; then
+            echo "mode=developer-id" >> "$GITHUB_OUTPUT"
+            echo "Signing mode: Developer ID (MACOS_CERTIFICATE present)"
+          else
+            echo "mode=adhoc" >> "$GITHUB_OUTPUT"
+            echo "Signing mode: ad-hoc (MACOS_CERTIFICATE not set)"
+            echo "::warning::No MACOS_CERTIFICATE secret — publishing an ad-hoc-signed binary. Gatekeeper will reject it on other Macs. See docs/code-signing.md."
+          fi
+
+      # Imports the .p12 into a throwaway keychain scoped to this job. The keychain
+      # is deleted in the always() step below so the key never outlives the run.
+      - name: Import Developer ID certificate
+        if: steps.signing.outputs.mode == 'developer-id'
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          echo -n "$MACOS_CERTIFICATE" | base64 --decode -o "$RUNNER_TEMP/cert.p12"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" \
+            -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign -f pkcs12
+          # Without this, codesign blocks on an interactive keychain prompt that
+          # no one can answer, and the job hangs until it times out.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
+          security list-keychain -d user -s "$KEYCHAIN" login.keychain-db
+
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN" \
+            | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)"/\1/')
+          if [ -z "$IDENTITY" ]; then
+            echo "::error::No Developer ID Application identity found in the imported certificate."
+            exit 1
+          fi
+          echo "Imported identity: $IDENTITY"
+          echo "SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+
+      - name: Sign and verify
+        run: |
+          set -euo pipefail
+          BIN=.build/release/apple-bridge
+          if [ "${{ steps.signing.outputs.mode }}" = "developer-id" ]; then
+            codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$BIN"
+          else
+            # Ad-hoc still binds the embedded Info.plist: SwiftPM's linker-signed
+            # output reports "Info.plist=not bound", leaving the privacy usage
+            # strings outside the signature.
+            codesign --force --sign - "$BIN"
+          fi
+
+          codesign -dv --verbose=4 "$BIN" 2>&1 | tee sig.txt
+          codesign --verify --strict --verbose=2 "$BIN"
+
+          if grep -q "Info.plist=not bound" sig.txt; then
+            echo "::error::Info.plist is not bound after signing"
+            exit 1
+          fi
+          if [ "${{ steps.signing.outputs.mode }}" = "developer-id" ]; then
+            grep -q "Authority=Developer ID Application" sig.txt \
+              || { echo "::error::Expected a Developer ID authority in the signature"; exit 1; }
+            grep -q "flags=.*runtime" sig.txt \
+              || { echo "::error::Hardened runtime not enabled (required for notarization)"; exit 1; }
+            grep -q "^Timestamp=" sig.txt \
+              || { echo "::error::No secure timestamp (signature would expire with the certificate)"; exit 1; }
+          fi
+
+      # Notarization needs an archive, not a bare executable. Skipped unless the
+      # notary secrets are present, and skipping is announced rather than silent.
+      - name: Notarize
+        if: steps.signing.outputs.mode == 'developer-id'
+        env:
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NOTARY_APPLE_ID:-}" ] || [ -z "${NOTARY_PASSWORD:-}" ] || [ -z "${NOTARY_TEAM_ID:-}" ]; then
+            echo "::warning::Notary secrets absent — signed but NOT notarized. Gatekeeper will warn on first launch for downloaded copies."
+            exit 0
+          fi
+          ditto -c -k --keepParent .build/release/apple-bridge "$RUNNER_TEMP/notarize.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" \
+            --apple-id "$NOTARY_APPLE_ID" \
+            --team-id "$NOTARY_TEAM_ID" \
+            --password "$NOTARY_PASSWORD" \
+            --wait
+          # A bare executable cannot be stapled (only bundles/dmg/pkg), so
+          # Gatekeeper verifies this one online. Nothing to staple here.
+          echo "Notarized."
+
+      - name: Package
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          cp .build/release/apple-bridge dist/
+          cp README.md LICENSE dist/ 2>/dev/null || cp README.md dist/
+          tar -czf "apple-bridge-${VERSION}-macos-arm64.tar.gz" -C dist .
+          shasum -a 256 "apple-bridge-${VERSION}-macos-arm64.tar.gz" \
+            > "apple-bridge-${VERSION}-macos-arm64.tar.gz.sha256"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" \
+            --title "apple-bridge $GITHUB_REF_NAME" \
+            --generate-notes \
+            "apple-bridge-${VERSION}-macos-arm64.tar.gz" \
+            "apple-bridge-${VERSION}-macos-arm64.tar.gz.sha256"
+
+      # Publishes the SAME signed artifact to the public mirror, so users have a
+      # download without the Developer ID key ever existing on a public repo.
+      # The key stays here; only a scoped token crosses the boundary, and a token
+      # is far cheaper to rotate than a code-signing identity.
+      #
+      # Requires a RELEASE_PAT secret: a fine-grained PAT scoped to
+      # boutquin/apple-bridge with Contents: read and write. Absent → skipped
+      # loudly, never silently.
+      - name: Publish artifact to public mirror
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          PUBLIC_REPO: boutquin/apple-bridge
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::warning::RELEASE_PAT not set — the signed binary was NOT published to $PUBLIC_REPO. Public users have no download for this version."
+            exit 0
+          fi
+          VERSION="${GITHUB_REF_NAME#v}"
+          MODE="${{ steps.signing.outputs.mode }}"
+
+          # The public mirror is a squash of this history, so its commits differ.
+          # Target its default branch head rather than assuming a matching SHA.
+          if gh release view "$GITHUB_REF_NAME" -R "$PUBLIC_REPO" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists on $PUBLIC_REPO — uploading/replacing assets."
+            gh release upload "$GITHUB_REF_NAME" \
+              "apple-bridge-${VERSION}-macos-arm64.tar.gz" \
+              "apple-bridge-${VERSION}-macos-arm64.tar.gz.sha256" \
+              --clobber -R "$PUBLIC_REPO"
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              -R "$PUBLIC_REPO" \
+              --target main \
+              --title "apple-bridge $GITHUB_REF_NAME" \
+              --notes "Signing: ${MODE}. Verify with \`shasum -a 256 -c apple-bridge-${VERSION}-macos-arm64.tar.gz.sha256\`." \
+              "apple-bridge-${VERSION}-macos-arm64.tar.gz" \
+              "apple-bridge-${VERSION}-macos-arm64.tar.gz.sha256"
+          fi
+          echo "Published to https://github.com/$PUBLIC_REPO/releases/tag/$GITHUB_REF_NAME"
+
+      # Runs even when an earlier step failed, so the signing key never survives
+      # the job. if: always() is the point — a failure between import and cleanup
+      # would otherwise leave the private key on the runner.
+      - name: Clean up keychain
+        if: always() && steps.signing.outputs.mode == 'developer-id'
+        run: |
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
+          rm -f "$RUNNER_TEMP/cert.p12" "$RUNNER_TEMP/notarize.zip" 2>/dev/null || true

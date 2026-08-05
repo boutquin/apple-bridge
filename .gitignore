@@ -38,3 +38,4 @@ sessions/
 
 # Specs are TRACKED on the private origin (apple-bridge.Dev); kept out of the public
 # repo's release archive via .gitattributes `specs/ export-ignore` — not gitignored.
+.claude/
