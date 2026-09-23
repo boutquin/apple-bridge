@@ -15,28 +15,78 @@ public struct ContactData: Sendable, Equatable, Codable {
     /// Full display name of the contact.
     public let displayName: String
 
-    /// Primary email address, if available.
-    public let email: String?
+    /// Given (first) name, if available.
+    public let givenName: String?
 
-    /// Primary phone number, if available.
-    public let phone: String?
+    /// Family (last) name, if available.
+    public let familyName: String?
+
+    /// Organization or company name, if available.
+    public let organization: String?
+
+    /// Job title, if available.
+    public let jobTitle: String?
+
+    /// Free-form note attached to the contact, if available.
+    public let note: String?
+
+    /// All email addresses, in Contacts order. `nil` when not projected.
+    public let emails: [LabeledValue]?
+
+    /// All phone numbers, in Contacts order. `nil` when not projected.
+    public let phones: [LabeledValue]?
+
+    /// All URLs, in Contacts order. `nil` when not projected.
+    public let urls: [LabeledValue]?
+
+    /// Primary email address — the first element of ``emails``.
+    public var email: String? { emails?.first?.value }
+
+    /// Primary phone number — the first element of ``phones``.
+    public var phone: String? { phones?.first?.value }
 
     /// Creates a new contact data instance.
+    ///
+    /// Mirrors `Contact` field-for-field: `email` / `phone` are shorthands for a
+    /// single unlabelled entry, and a supplied plural wins over its singular.
+    ///
     /// - Parameters:
     ///   - id: Unique identifier for the contact.
     ///   - displayName: Full display name.
-    ///   - email: Primary email address.
-    ///   - phone: Primary phone number.
+    ///   - email: Shorthand for a single unlabelled email address.
+    ///   - phone: Shorthand for a single unlabelled phone number.
+    ///   - givenName: Given (first) name.
+    ///   - familyName: Family (last) name.
+    ///   - organization: Organization or company name.
+    ///   - jobTitle: Job title.
+    ///   - note: Free-form note.
+    ///   - emails: All email addresses, in Contacts order.
+    ///   - phones: All phone numbers, in Contacts order.
+    ///   - urls: All URLs, in Contacts order.
     public init(
         id: String,
         displayName: String,
         email: String? = nil,
-        phone: String? = nil
+        phone: String? = nil,
+        givenName: String? = nil,
+        familyName: String? = nil,
+        organization: String? = nil,
+        jobTitle: String? = nil,
+        note: String? = nil,
+        emails: [LabeledValue]? = nil,
+        phones: [LabeledValue]? = nil,
+        urls: [LabeledValue]? = nil
     ) {
         self.id = id
         self.displayName = displayName
-        self.email = email
-        self.phone = phone
+        self.givenName = givenName
+        self.familyName = familyName
+        self.organization = organization
+        self.jobTitle = jobTitle
+        self.note = note
+        self.emails = emails ?? email.map { $0.isEmpty ? [] : [LabeledValue(value: $0)] }
+        self.phones = phones ?? phone.map { $0.isEmpty ? [] : [LabeledValue(value: $0)] }
+        self.urls = urls
     }
 }
 
@@ -92,4 +142,36 @@ public protocol ContactsAdapterProtocol: Sendable {
     /// - Parameter id: Contact identifier.
     /// - Throws: `ValidationError.notFound` if the contact doesn't exist.
     func openContact(id: String) async throws
+
+    // MARK: - Write Operations
+
+    /// Creates a new contact.
+    ///
+    /// The `id` on `data` is **ignored** — the store assigns one, and it is
+    /// returned on the result. Every other field is written as supplied.
+    ///
+    /// Creation is atomic: the person and all of its multi-value entries are
+    /// committed in a single save, so a failure part-way leaves no record
+    /// behind.
+    ///
+    /// - Parameter data: The contact to create. At least one of `givenName`,
+    ///   `familyName`, or `displayName` must be non-empty.
+    /// - Returns: The created contact, carrying the store-assigned identifier.
+    /// - Throws: `ValidationError.missingRequired` when no name field is given.
+    func createContact(_ data: ContactData) async throws -> ContactData
+
+    /// Updates an existing contact.
+    ///
+    /// **Absent means unchanged; present means set.** A `nil` field is left
+    /// alone; a supplied field replaces the current value, and an empty string
+    /// or empty array clears it. A supplied collection **replaces** that
+    /// collection rather than appending to it — to add an entry, send the
+    /// existing entries alongside the new one.
+    ///
+    /// - Parameters:
+    ///   - id: The identifier of the contact to update.
+    ///   - data: The fields to change. Its `id` is ignored in favour of `id`.
+    /// - Returns: The contact as it stands after the update.
+    /// - Throws: `ValidationError.notFound` if the contact doesn't exist.
+    func updateContact(id: String, _ data: ContactData) async throws -> ContactData
 }

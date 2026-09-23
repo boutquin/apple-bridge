@@ -13,14 +13,18 @@ struct SchemaValidationTests {
         if let url = Bundle.module.url(forResource: "test-notes", withExtension: "sqlite", subdirectory: "Fixtures") {
             return url.path
         }
-        return "/Users/pierre/Documents/Code/boutquin/apple-bridge/Tests/AdapterTests/Fixtures/test-notes.sqlite"
+        return URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/test-notes.sqlite").path
     }
 
     private var testMessagesFixturePath: String {
         if let url = Bundle.module.url(forResource: "test-messages", withExtension: "sqlite", subdirectory: "Fixtures") {
             return url.path
         }
-        return "/Users/pierre/Documents/Code/boutquin/apple-bridge/Tests/AdapterTests/Fixtures/test-messages.sqlite"
+        return URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/test-messages.sqlite").path
     }
 
     // MARK: - Notes Schema Validation Tests

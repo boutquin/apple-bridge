@@ -14,7 +14,7 @@ struct ToolRegistryTests {
         let registry = ToolRegistry.create(services: services)
 
         let definitions = await registry.definitions
-        #expect(definitions.count == 35, "Expected 35 tools, got \(definitions.count)")
+        #expect(definitions.count == 37, "Expected 37 tools, got \(definitions.count)")
     }
 
     @Test("ToolRegistry has no duplicate tool names")
@@ -120,8 +120,8 @@ struct ToolRegistryTests {
         let definitions = await registry.definitions
         let contactsTools = definitions.filter { $0.name.hasPrefix("contacts_") }
 
-        // 4 contacts tools: search, get, me, open
-        #expect(contactsTools.count == 4, "Expected 4 contacts tools, got \(contactsTools.count)")
+        // 6 contacts tools: search, get, me, open, create, update
+        #expect(contactsTools.count == 6, "Expected 6 contacts tools, got \(contactsTools.count)")
 
         let expectedNames = ["contacts_search", "contacts_get", "contacts_me", "contacts_open"]
         for name in expectedNames {

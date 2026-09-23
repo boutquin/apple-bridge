@@ -14,9 +14,10 @@ import Foundation
 /// drift was invisible because nothing compared them. `VersionTests` now does,
 /// so the two cannot diverge again without a red test.
 ///
-/// When releasing: bump `current` here, run the test suite (which enforces the
-/// plist match), and tag the release with the same number prefixed by `v`.
+/// When releasing: bump `current` here, add the matching `CHANGELOG.md` entry,
+/// run the test suite (which enforces both), and tag the release with the same
+/// number prefixed by `v`. The full procedure is in `docs/code-signing.md`.
 public enum AppleBridgeVersion {
     /// The canonical version string, in `MAJOR.MINOR.PATCH` form.
-    public static let current = "3.0.15"
+    public static let current = "3.1.0"
 }

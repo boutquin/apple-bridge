@@ -55,7 +55,7 @@ struct CalendarSystemTests {
         #expect(events.items.count <= 5)
     }
 
-    // MARK: - Identifier Round-Trip (chore-calendar-event-identifier-roundtrip)
+    // MARK: - Identifier Round-Trip
 
     /// ISO-8601 formatter matching the service's own format (fractional seconds).
     private static func iso(_ date: Date) -> String {

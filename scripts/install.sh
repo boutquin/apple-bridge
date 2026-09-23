@@ -88,7 +88,13 @@ if [ "$SIGN_IDENTITY" = "-" ]; then
     codesign --force --sign - "$DEST"
 else
     echo -e "${YELLOW}Signing as:${NC} $SIGN_IDENTITY"
-    codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$DEST"
+    # The hardened runtime (required for notarization) gates in-process
+    # Calendar/Reminders/Contacts access on these entitlements. Launched by an
+    # MCP host the host's own grant covered it in testing, but the bridge must
+    # not depend on how it is launched.
+    codesign --force --options runtime --timestamp \
+        --entitlements AppleBridge.entitlements \
+        --sign "$SIGN_IDENTITY" "$DEST"
 fi
 
 # Fail loudly rather than install a binary whose usage strings aren't covered —

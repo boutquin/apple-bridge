@@ -84,8 +84,8 @@ struct VersionTests {
     /// The privacy usage descriptions are load-bearing, not decorative: without
     /// `NSCalendarsFullAccessUsageDescription`, `requestFullAccessToEvents()` is
     /// auto-denied with no prompt and the server is permanently capped at
-    /// write-only calendar access — the exact failure diagnosed in
-    /// `specs/done/chore-calendar-event-identifier-roundtrip.md`.
+    /// write-only calendar access: `calendar_create` succeeds while every
+    /// calendar read fails.
     @Test("Required macOS 14+ privacy usage descriptions are present and non-empty")
     func testPrivacyUsageDescriptionsPresent() throws {
         let plist = try Self.infoPlist()
@@ -101,5 +101,19 @@ struct VersionTests {
             #expect(value != nil, "Missing required Info.plist key: \(key)")
             #expect(!(value ?? "").isEmpty, "Empty usage description for: \(key)")
         }
+    }
+
+    /// The public release notes are cut from CHANGELOG.md, and the release job
+    /// refuses a tag without a dated entry. Checking for the entry here moves
+    /// that failure from tag time to the commit that bumps the version.
+    @Test("CHANGELOG.md has an entry for the current version")
+    func testChangelogHasCurrentVersion() throws {
+        let changelogURL = Self.infoPlistURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("CHANGELOG.md")
+        let text = try String(contentsOf: changelogURL, encoding: .utf8)
+        let heading = "## [\(AppleBridgeVersion.current)] — "
+        let hasEntry = text.split(separator: "\n").contains { $0.hasPrefix(heading) }
+        #expect(hasEntry, "CHANGELOG.md has no '\(heading)…' entry for the current version")
     }
 }

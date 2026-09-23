@@ -19,22 +19,41 @@ jobs:
     #
     # macos-latest is deliberate rather than a hard-pinned newest label: the
     # label set changes over time, and `latest` cannot go stale or 404.
+    #
+    # Both ends run on main, where a toolchain divergence has to be caught.
+    # Pull requests run the pinned image alone: macOS bills at 10x, so the
+    # second runner costs ~10 billable minutes per PR revision to re-answer a
+    # question the merge to main asks again minutes later. (Measured 2026-08-26:
+    # macos-15 carries Swift 6.1.2 and macos-latest Swift 6.3.3 — the images do
+    # diverge, which is why this matrix keeps both rather than collapsing.)
+    #
+    # macos-15 is the FLOOR runner: it selects Xcode 26.0.1 (Swift 6.2.0), the
+    # oldest toolchain the README promises. Its default Xcode 16.4 (Swift 6.1)
+    # cannot resolve swift-collections 1.7+, which requires tools version 6.2.
+    # Raise `xcode` here whenever the stated minimum moves.
     name: Build & Test (${{ matrix.runner }})
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        runner: [macos-15, macos-latest]
+        runner: ${{ github.event_name == 'pull_request' && fromJSON('["macos-15"]') || fromJSON('["macos-15", "macos-latest"]') }}
+        include:
+          - runner: macos-15
+            xcode: "26.0.1"
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Select Xcode ${{ matrix.xcode }}
+        if: matrix.xcode
+        run: sudo xcode-select -s "/Applications/Xcode_${{ matrix.xcode }}.app"
+
       - name: Report toolchain
         run: swift --version
 
       # Keyed on Package.resolved so the cache invalidates exactly when the
-      # dependency graph changes, and on the Swift version so two runner images
+      # dependency graph changes, and on the selected Xcode so two toolchains
       # never share incompatible build artifacts.
       - name: Cache SwiftPM
         uses: actions/cache@v4
@@ -42,10 +61,10 @@ jobs:
           path: |
             .build
             ~/Library/Caches/org.swift.swiftpm
-          key: spm-${{ matrix.runner }}-${{ hashFiles('Package.resolved') }}-${{ hashFiles('**/.swift-version') }}-${{ hashFiles('Package.swift') }}
+          key: spm-${{ matrix.runner }}-xcode${{ matrix.xcode || 'default' }}-${{ hashFiles('Package.resolved') }}-${{ hashFiles('**/.swift-version') }}-${{ hashFiles('Package.swift') }}
           restore-keys: |
-            spm-${{ matrix.runner }}-${{ hashFiles('Package.resolved') }}-
-            spm-${{ matrix.runner }}-
+            spm-${{ matrix.runner }}-xcode${{ matrix.xcode || 'default' }}-${{ hashFiles('Package.resolved') }}-
+            spm-${{ matrix.runner }}-xcode${{ matrix.xcode || 'default' }}-
 
       # The warning gate reuses THIS build's output. It used to run a third full
       # `swift build` purely to grep its log, which on a cold cache doubled the
@@ -70,13 +89,10 @@ jobs:
       - name: Run Tests
         run: swift test
 
-  lint:
-    name: Lint
-    runs-on: macos-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
+      # Folded in from a standalone `lint` job. The check itself takes ~18
+      # seconds, but as its own macOS job it was billed the 1-minute minimum
+      # against the 10x multiplier — ten minutes per trigger to parse a
+      # manifest. As a step it costs nothing and now runs on every runner in
+      # the matrix rather than one.
       - name: Verify Package
         run: swift package dump-package > /dev/null

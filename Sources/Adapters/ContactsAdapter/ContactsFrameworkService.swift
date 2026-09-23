@@ -62,15 +62,64 @@ public struct ContactsFrameworkService: ContactsService, Sendable {
         try await adapter.openContact(id: id)
     }
 
+    // MARK: - Write Operations
+
+    /// Creates a new contact.
+    /// - Parameter contact: The contact to create; its `id` is ignored.
+    /// - Returns: The created contact with its store-assigned identifier.
+    public func create(_ contact: Contact) async throws -> Contact {
+        convertToContact(try await adapter.createContact(convertToData(contact)))
+    }
+
+    /// Updates an existing contact.
+    /// - Parameters:
+    ///   - id: The identifier of the contact to update.
+    ///   - contact: The fields to change.
+    /// - Returns: The contact after the update.
+    public func update(id: String, _ contact: Contact) async throws -> Contact {
+        convertToContact(try await adapter.updateContact(id: id, convertToData(contact)))
+    }
+
     // MARK: - Private Helpers
 
+    /// Converts a `Contact` to a `ContactData` for the adapter layer.
+    ///
+    /// Collections pass through untouched: forwarding the `email` / `phone`
+    /// projections instead would drop every entry after the first.
+    private func convertToData(_ contact: Contact) -> ContactData {
+        ContactData(
+            id: contact.id,
+            displayName: contact.displayName,
+            givenName: contact.givenName,
+            familyName: contact.familyName,
+            organization: contact.organization,
+            jobTitle: contact.jobTitle,
+            note: contact.note,
+            emails: contact.emails,
+            phones: contact.phones,
+            urls: contact.urls
+        )
+    }
+
+
     /// Converts a `ContactData` to a `Contact`.
+    ///
+    /// Passes the collections through rather than the `email` / `phone`
+    /// projections: those are derived from the collections on both types, so
+    /// forwarding the singular form would silently drop every entry after the
+    /// first.
     private func convertToContact(_ data: ContactData) -> Contact {
         Contact(
             id: data.id,
             displayName: data.displayName,
-            email: data.email,
-            phone: data.phone
+            givenName: data.givenName,
+            familyName: data.familyName,
+            organization: data.organization,
+            jobTitle: data.jobTitle,
+            note: data.note,
+            emails: data.emails,
+            phones: data.phones,
+            urls: data.urls
         )
     }
 }

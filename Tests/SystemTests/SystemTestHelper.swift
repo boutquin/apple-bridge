@@ -1,5 +1,11 @@
 import Foundation
 import Testing
+import Adapters
+import Core
+
+#if canImport(Contacts)
+import Contacts
+#endif
 
 #if canImport(EventKit)
 import EventKit
@@ -68,5 +74,59 @@ enum SystemTestHelper {
     /// - Specific permission configurations
     static var manualQAEnabled: Bool {
         ProcessInfo.processInfo.environment["APPLE_BRIDGE_MANUAL_QA"] == "1"
+    }
+
+    // MARK: - Contacts
+
+    /// Returns true if the test runner can read and write contacts.
+    ///
+    /// `ContactsAccessModelTests` pins that macOS Contacts has no split-access state: the single
+    /// `authorized` grant covers both directions, so unlike
+    /// ``calendarFullAccess`` there is no write-only case to exclude.
+    ///
+    /// Note the grant is attributed to the **responsible parent** process, so for
+    /// a Claude-launched run the System Settings entry is under Claude rather
+    /// than under apple-bridge — the same attribution quirk documented on
+    /// ``calendarFullAccess``.
+    static var contactsAccess: Bool {
+        #if canImport(Contacts)
+        return CNContactStore.authorizationStatus(for: .contacts) == .authorized
+        #else
+        return false
+        #endif
+    }
+
+    /// Deletes a contact created by a test.
+    ///
+    /// **This is deliberately test-internal and must stay that way.** The spec
+    /// keeps contact deletion off the MCP surface on purpose — an agent should
+    /// not have a one-call path to permanently removing personal data — but a
+    /// test that creates a record must be able to remove it, and those two facts
+    /// do not conflict as long as the capability never reaches
+    /// `ContactsAdapterProtocol`, the service, or the registry. It lives here,
+    /// in the test target, and nowhere else.
+    ///
+    /// Never fails the calling test: cleanup runs from `defer` while an
+    /// assertion failure may already be propagating, and masking that with a
+    /// cleanup error would hide the real one. A failure is reported to stderr so
+    /// a leaked record is still visible.
+    static func deleteContact(id: String) async {
+        let escaped = id
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        let script = """
+            tell application "Contacts"
+                try
+                    delete (first person whose id is "\(escaped)")
+                    save
+                end try
+            end tell
+            """
+        do {
+            _ = try await AppleScriptRunner.shared.run(script: script, timeout: 15)
+        } catch {
+            FileHandle.standardError.write(
+                Data("[cleanup] FAILED to delete test contact \(id): \(error)\n".utf8))
+        }
     }
 }

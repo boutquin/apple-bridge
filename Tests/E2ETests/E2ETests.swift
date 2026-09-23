@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import Core
 
 /// End-to-end tests for the apple-bridge MCP server.
 ///
@@ -61,7 +62,10 @@ struct E2ETests {
 
         // Server should report its version in the response
         #expect(stdout.contains("apple-bridge"))
-        #expect(stdout.contains("3.0")) // Major.minor version
+        // Asserted against the single source of truth rather than a literal:
+        // a hard-coded "3.0" silently breaks on every version bump, which is a
+        // test that fails for the one reason it should not.
+        #expect(stdout.contains(AppleBridgeVersion.current))
     }
 
     // MARK: - 13.2 Signal Handling Tests

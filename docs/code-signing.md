@@ -84,8 +84,14 @@ APPLE_BRIDGE_SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
 ```
 
 That path adds `--options runtime` (hardened runtime, a notarization
-prerequisite) and `--timestamp` (a secure timestamp, so the signature stays
-valid after the certificate expires).
+prerequisite), `--timestamp` (a secure timestamp, so the signature stays
+valid after the certificate expires), and `--entitlements
+AppleBridge.entitlements`. The hardened runtime gates in-process Calendar,
+Reminders and Contacts access on those entitlements. Tested on 2026-09-23,
+a hardened-runtime build *without* them still read Calendar and Reminders when
+launched by an MCP host, whose own grant covered it, but the entitlements are
+embedded anyway so access never depends on how the bridge is launched.
+`codesign -d --entitlements - <binary>` shows them.
 
 ### 3. Notarize
 
@@ -107,6 +113,11 @@ ditto -c -k --keepParent ~/bin/apple-bridge apple-bridge.zip
 xcrun notarytool submit apple-bridge.zip \
   --keychain-profile "apple-bridge-notary" --wait
 ```
+
+Read the final `status:` line: only `Accepted` means notarized. A rejection
+(`Invalid`) is still a completed submission; `xcrun notarytool log <id>
+--keychain-profile "apple-bridge-notary"` explains it. The release workflow
+enforces this and fails the release on anything but `Accepted`.
 
 ### 4. Stapling — and why it does not apply here
 
@@ -206,6 +217,24 @@ publish releases and nothing else, and rotating it costs a minute — unlike a
 Developer ID key. If `RELEASE_PAT` is absent the step is skipped with a warning,
 so the private release still succeeds and you simply have no public download.
 
+### Cutting a release
+
+Order matters: the public release is created against the mirror's `main`, so
+the mirror must already carry the release's source when the tag fires.
+
+1. Bump `AppleBridgeVersion.current` (`Sources/Core/Version.swift`) and both
+   version keys in `Info.plist`; date the version's `CHANGELOG.md` entry
+   (`## [X.Y.Z] — YYYY-MM-DD`). `swift test` fails if any of the three disagree.
+2. Commit and push to `origin`; wait for CI to go green.
+3. Sync the mirror from a fresh clone of it: clear the tree, overlay
+   `git archive` of the private `HEAD` (`.gitattributes` `export-ignore` keeps
+   specs, sessions, `release.yml` and `verify-signing.yml` out), commit as
+   `vX.Y.Z — <summary>`, push `main`. Do not tag the mirror.
+4. Tag `vX.Y.Z` in the private repo and push the tag. `release.yml` verifies
+   the tag against the version and the CHANGELOG, tests, builds, signs,
+   notarizes if configured, and publishes to both repositories — the public
+   release's notes are the CHANGELOG entry.
+
 ### Custody
 
 A Developer ID private key in CI is a real custody decision, not a checkbox.
@@ -217,6 +246,6 @@ matters. Revoke and reissue at developer.apple.com if a key is ever exposed.
 
 - README → *Granting permissions when launched by an MCP host* — the permissions
   path, which signing does not replace
-- `specs/done/chore-calendar-event-identifier-roundtrip.md` — the write-only
-  diagnosis and its resolution
+- README → *Calendars is a dropdown, not a checkbox* — the write-only calendar
+  access trap and its fix
 - `scripts/install.sh` — the signing implementation

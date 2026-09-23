@@ -19,3 +19,4 @@ sessions/** export-ignore
 # to push that binary to the mirror from the mirror. ci.yml is deliberately NOT
 # excluded — the public repo should still build and test on its own.
 .github/workflows/release.yml export-ignore
+.github/workflows/verify-signing.yml export-ignore

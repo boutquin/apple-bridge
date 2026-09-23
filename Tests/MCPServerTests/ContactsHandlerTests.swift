@@ -233,4 +233,127 @@ struct ContactsHandlerTests {
             #expect(text.contains("Contacts") || text.contains("permission") || text.contains("denied"))
         }
     }
+
+    // MARK: - contacts_create
+
+    @Test("contacts_create creates a contact and returns its new id")
+    func testContactsCreateReturnsNewContact() async throws {
+        let services = makeTestServices()
+        let registry = ToolRegistry.create(services: services)
+
+        let result = await registry.callTool(name: "contacts_create", arguments: [
+            "givenName": .string("Ada"),
+            "familyName": .string("Lovelace"),
+            "organization": .string("Analytical Engines"),
+            "jobTitle": .string("Chief Mathematician"),
+            "note": .string("Multi-line\nnote with \"quotes\"."),
+            "emails": .array([.object(["label": .string("work"), "value": .string("ada@example.com")])]),
+            "urls": .array([.string("https://example.com")])
+        ])
+
+        #expect(result.isError == false)
+        if case .text(let text, _, _) = result.content.first {
+            #expect(text.contains("Ada"))
+            #expect(text.contains("ada@example.com"))
+            #expect(text.contains("Analytical Engines"))
+            // JSONEncoder escapes forward slashes (`https:\/\/`), which is valid
+            // JSON; assert on the unescaped host rather than the full URL.
+            #expect(text.contains("example.com"))
+            #expect(text.contains("\"urls\""))
+        }
+        #expect(await services.mockContacts.createdContacts.count == 1)
+    }
+
+    @Test("contacts_create requires at least one name field")
+    func testContactsCreateRequiresAName() async throws {
+        let services = makeTestServices()
+        let registry = ToolRegistry.create(services: services)
+
+        let result = await registry.callTool(name: "contacts_create", arguments: [
+            "organization": .string("No Name Ltd")
+        ])
+
+        #expect(result.isError == true)
+        #expect(await services.mockContacts.createdContacts.isEmpty, "a rejected create must not reach the service")
+    }
+
+    @Test("contacts_create rejects a singular and its plural together")
+    func testContactsCreateRejectsSingularAndPlural() async throws {
+        let services = makeTestServices()
+        let registry = ToolRegistry.create(services: services)
+
+        let result = await registry.callTool(name: "contacts_create", arguments: [
+            "givenName": .string("Ada"),
+            "email": .string("one@example.com"),
+            "emails": .array([.string("two@example.com")])
+        ])
+
+        #expect(result.isError == true)
+        #expect(await services.mockContacts.createdContacts.isEmpty)
+    }
+
+    // MARK: - contacts_update
+
+    @Test("contacts_update changes only the supplied field")
+    func testContactsUpdateLeavesAbsentFieldsAlone() async throws {
+        let services = makeTestServices()
+        let registry = ToolRegistry.create(services: services)
+
+        let created = await registry.callTool(name: "contacts_create", arguments: [
+            "givenName": .string("Ada"),
+            "organization": .string("Analytical Engines"),
+            "note": .string("keep me")
+        ])
+        #expect(created.isError == false)
+        let id = await services.mockContacts.createdContacts.isEmpty
+            ? "" : "mock-contact-1"
+
+        let result = await registry.callTool(name: "contacts_update", arguments: [
+            "id": .string(id),
+            "jobTitle": .string("Chief Mathematician")
+        ])
+
+        #expect(result.isError == false)
+        if case .text(let text, _, _) = result.content.first {
+            #expect(text.contains("Chief Mathematician"))
+            #expect(text.contains("Analytical Engines"), "an absent field must survive the update")
+            #expect(text.contains("keep me"))
+        }
+    }
+
+    @Test("contacts_update requires id")
+    func testContactsUpdateRequiresId() async throws {
+        let services = makeTestServices()
+        let registry = ToolRegistry.create(services: services)
+
+        let result = await registry.callTool(name: "contacts_update", arguments: [
+            "jobTitle": .string("Nobody")
+        ])
+
+        #expect(result.isError == true)
+    }
+
+    @Test("contacts_update on an unknown id returns not-found")
+    func testContactsUpdateUnknownId() async throws {
+        let services = makeTestServices()
+        let registry = ToolRegistry.create(services: services)
+
+        let result = await registry.callTool(name: "contacts_update", arguments: [
+            "id": .string("does-not-exist"),
+            "jobTitle": .string("Ghost")
+        ])
+
+        #expect(result.isError == true)
+    }
+
+    @Test("Both write tools are registered")
+    func testWriteToolsAreRegistered() async throws {
+        let services = makeTestServices()
+        let registry = ToolRegistry.create(services: services)
+        let names = await registry.definitions.map(\.name)
+
+        #expect(names.contains("contacts_create"))
+        #expect(names.contains("contacts_update"))
+        #expect(names.filter { $0.hasPrefix("contacts_") }.count == 6)
+    }
 }

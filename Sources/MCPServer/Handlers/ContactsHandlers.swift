@@ -14,6 +14,8 @@ import Core
 /// | `contacts_get` | Get contact | `id` |
 /// | `contacts_me` | Get user's card | none |
 /// | `contacts_open` | Open in app | `id` |
+/// | `contacts_create` | Create a contact | one of `givenName` / `familyName` / `displayName` |
+/// | `contacts_update` | Update a contact | `id` |
 enum ContactsHandlers {
 
     // MARK: - Handler Implementations
@@ -108,6 +110,143 @@ enum ContactsHandlers {
             )
         } catch {
             return HandlerUtilities.errorResult(error)
+        }
+    }
+
+    // MARK: - Write Handlers
+
+    /// Handler for `contacts_create` — creates a new contact.
+    ///
+    /// - Parameters:
+    ///   - services: The Apple services container.
+    ///   - arguments: MCP arguments. At least one of `givenName`, `familyName`,
+    ///     or `displayName` is required; `organization`, `jobTitle`, `note`,
+    ///     `email`, `phone`, `emails`, `phones`, `urls` are optional.
+    /// - Returns: JSON object with the created contact, including its new `id`.
+    static func createContact(
+        services: any AppleServicesProtocol,
+        arguments: [String: Value]?
+    ) async -> CallTool.Result {
+        let givenName = HandlerUtilities.extractString(from: arguments, key: "givenName")
+        let familyName = HandlerUtilities.extractString(from: arguments, key: "familyName")
+        let displayName = HandlerUtilities.extractString(from: arguments, key: "displayName")
+
+        guard [givenName, familyName, displayName].contains(where: { $0?.isEmpty == false }) else {
+            return HandlerUtilities.missingRequiredParameter("givenName, familyName, or displayName")
+        }
+
+        let draft: Contact
+        do {
+            draft = try Self.contact(from: arguments, id: "", displayName: displayName ?? "")
+        } catch {
+            return HandlerUtilities.errorResult(error)
+        }
+
+        do {
+            return HandlerUtilities.successResult(try await services.contacts.create(draft))
+        } catch {
+            return HandlerUtilities.errorResult(error)
+        }
+    }
+
+    /// Handler for `contacts_update` — updates an existing contact.
+    ///
+    /// Absent arguments leave their field unchanged; an empty string or empty
+    /// array clears it. A supplied collection replaces that collection.
+    ///
+    /// - Parameters:
+    ///   - services: The Apple services container.
+    ///   - arguments: MCP arguments containing `id` (required) plus any field to change.
+    /// - Returns: JSON object with the updated contact.
+    static func updateContact(
+        services: any AppleServicesProtocol,
+        arguments: [String: Value]?
+    ) async -> CallTool.Result {
+        guard let id = HandlerUtilities.extractString(from: arguments, key: "id") else {
+            return HandlerUtilities.missingRequiredParameter("id")
+        }
+
+        let patch: Contact
+        do {
+            patch = try Self.contact(from: arguments, id: id, displayName: "")
+        } catch {
+            return HandlerUtilities.errorResult(error)
+        }
+
+        do {
+            return HandlerUtilities.successResult(try await services.contacts.update(id: id, patch))
+        } catch {
+            return HandlerUtilities.errorResult(error)
+        }
+    }
+
+    // MARK: - Argument Decoding
+
+    /// Builds a `Contact` from MCP arguments, shared by create and update.
+    ///
+    /// Rejects a singular/plural pair for the same property rather than merging
+    /// silently: `email` with `emails` (or `phone` with `phones`) is an
+    /// ambiguous request, and guessing which one the caller meant would
+    /// silently drop data.
+    private static func contact(
+        from arguments: [String: Value]?,
+        id: String,
+        displayName: String
+    ) throws -> Contact {
+        let email = HandlerUtilities.extractString(from: arguments, key: "email")
+        let phone = HandlerUtilities.extractString(from: arguments, key: "phone")
+        let emails = try Self.labeledValues(from: arguments, key: "emails")
+        let phones = try Self.labeledValues(from: arguments, key: "phones")
+
+        if email != nil, emails != nil {
+            throw ValidationError.invalidFormat(field: "email", expected: "either `email` or `emails`, not both")
+        }
+        if phone != nil, phones != nil {
+            throw ValidationError.invalidFormat(field: "phone", expected: "either `phone` or `phones`, not both")
+        }
+
+        return Contact(
+            id: id,
+            displayName: displayName,
+            email: email,
+            phone: phone,
+            givenName: HandlerUtilities.extractString(from: arguments, key: "givenName"),
+            familyName: HandlerUtilities.extractString(from: arguments, key: "familyName"),
+            organization: HandlerUtilities.extractString(from: arguments, key: "organization"),
+            jobTitle: HandlerUtilities.extractString(from: arguments, key: "jobTitle"),
+            note: HandlerUtilities.extractString(from: arguments, key: "note"),
+            emails: emails,
+            phones: phones,
+            urls: try Self.labeledValues(from: arguments, key: "urls")
+        )
+    }
+
+    /// Decodes an array of `{label?, value}` objects.
+    ///
+    /// Returns `nil` when the key is absent (leave unchanged) and `[]` for an
+    /// empty array (clear) — the two must stay distinguishable.
+    private static func labeledValues(from arguments: [String: Value]?, key: String) throws -> [LabeledValue]? {
+        guard let arguments, let value = arguments[key] else { return nil }
+        guard case .array(let entries) = value else {
+            throw ValidationError.invalidFormat(field: key, expected: "an array of {label, value} objects")
+        }
+
+        return try entries.map { entry in
+            switch entry {
+            case .string(let plain):
+                return LabeledValue(value: plain)
+            case .object(let fields):
+                guard case .string(let entryValue)? = fields["value"], !entryValue.isEmpty else {
+                    throw ValidationError.invalidFormat(field: key, expected: "each entry to carry a non-empty `value`")
+                }
+                var label: String?
+                if case .string(let entryLabel)? = fields["label"], !entryLabel.isEmpty {
+                    label = entryLabel
+                }
+                return LabeledValue(label: label, value: entryValue)
+            default:
+                throw ValidationError.invalidFormat(field: key, expected: "each entry to be a string or a {label, value} object")
+            }
         }
     }
 }

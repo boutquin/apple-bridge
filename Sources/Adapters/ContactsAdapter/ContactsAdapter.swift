@@ -47,18 +47,161 @@ public actor ContactsAdapter: ContactsAdapterProtocol {
         #endif
     }
 
+    // MARK: - Write Operations
+
+    public func createContact(_ data: ContactData) async throws -> ContactData {
+        #if canImport(Contacts)
+        let contact = CNMutableContact()
+        Self.apply(data, to: contact, replacingCollections: true, includeNameFallback: true)
+
+        // Name fields only — an organization is not a name.
+        guard !contact.givenName.isEmpty || !contact.familyName.isEmpty else {
+            throw ValidationError.missingRequired(field: "givenName, familyName, or displayName")
+        }
+
+        let request = CNSaveRequest()
+        request.add(contact, toContainerWithIdentifier: nil)
+        try contactStore.execute(request)
+        return try await fetchContact(id: contact.identifier)
+        #else
+        throw PermissionError.contactsDenied
+        #endif
+    }
+
+    public func updateContact(id: String, _ data: ContactData) async throws -> ContactData {
+        #if canImport(Contacts)
+        let existing: CNContact
+        do {
+            existing = try contactStore.unifiedContact(withIdentifier: id, keysToFetch: Self.contactKeysToFetch)
+        } catch CNError.recordDoesNotExist {
+            throw ValidationError.notFound(resource: "contact", id: id)
+        }
+
+        guard let mutable = existing.mutableCopy() as? CNMutableContact else {
+            throw ValidationError.notFound(resource: "contact", id: id)
+        }
+        Self.apply(data, to: mutable, replacingCollections: true, includeNameFallback: false)
+
+        let request = CNSaveRequest()
+        request.update(mutable)
+        try contactStore.execute(request)
+        return try await fetchContact(id: id)
+        #else
+        throw PermissionError.contactsDenied
+        #endif
+    }
+
+    #if canImport(Contacts)
+    /// Applies the supplied fields to a mutable contact.
+    ///
+    /// Absent (`nil`) fields are left untouched; supplied ones are written, and
+    /// an empty string or empty array clears. `note` is never written — see
+    /// ``contactKeysToFetch`` for why this adapter cannot touch notes at all.
+    static func apply(
+        _ data: ContactData,
+        to contact: CNMutableContact,
+        replacingCollections: Bool,
+        includeNameFallback: Bool
+    ) {
+        if let givenName = data.givenName { contact.givenName = givenName }
+        if let familyName = data.familyName { contact.familyName = familyName }
+        if let organization = data.organization { contact.organizationName = organization }
+        if let jobTitle = data.jobTitle { contact.jobTitle = jobTitle }
+
+        if includeNameFallback, data.givenName == nil, data.familyName == nil,
+           !data.displayName.isEmpty {
+            contact.givenName = data.displayName
+        }
+
+        if let emails = data.emails {
+            contact.emailAddresses = emails.map {
+                CNLabeledValue(label: $0.label, value: $0.value as NSString)
+            }
+        }
+        if let phones = data.phones {
+            contact.phoneNumbers = phones.map {
+                CNLabeledValue(label: $0.label, value: CNPhoneNumber(stringValue: $0.value))
+            }
+        }
+        if let urls = data.urls {
+            contact.urlAddresses = urls.map {
+                CNLabeledValue(label: $0.label, value: $0.value as NSString)
+            }
+        }
+    }
+    #endif
+
+    // MARK: - Read Projection
+
+    #if canImport(Contacts)
+    /// Keys every read path fetches.
+    ///
+    /// `CNContactStore` throws if a property is accessed that was not requested
+    /// here, so this list and ``contactData(from:)`` must move together — the
+    /// single definition is what keeps the three read paths from drifting apart.
+    /// Computed rather than stored: `[any CNKeyDescriptor]` is not `Sendable`,
+    /// so a `static let` is a strict-concurrency error. Each access builds a
+    /// fresh array, which costs nothing at these call rates.
+    ///
+    /// **`CNContactNoteKey` is deliberately absent.** Reading a contact's note
+    /// through the Contacts framework requires the restricted
+    /// `com.apple.developer.contacts.notes` entitlement, which Apple grants only
+    /// on request and which this app does not carry. Requesting the key does not
+    /// fail — the framework simply does not fetch it, and the later
+    /// `contact.note` access raises `CNPropertyNotFetchedException`. That is an
+    /// Objective-C exception, not a Swift error, so it **terminates the process**
+    /// rather than surfacing as a `throw` no `try` can catch it. This adapter
+    /// therefore projects `note: nil`, which per the DTO contract means "not
+    /// projected" rather than "empty". The wired `AppleScriptContactsAdapter`
+    /// reads notes normally over the Automation pathway, so the shipped tools
+    /// are unaffected.
+    static var contactKeysToFetch: [CNKeyDescriptor] {
+        [
+        CNContactIdentifierKey as CNKeyDescriptor,
+        CNContactGivenNameKey as CNKeyDescriptor,
+        CNContactFamilyNameKey as CNKeyDescriptor,
+        CNContactOrganizationNameKey as CNKeyDescriptor,
+        CNContactJobTitleKey as CNKeyDescriptor,
+        CNContactEmailAddressesKey as CNKeyDescriptor,
+        CNContactPhoneNumbersKey as CNKeyDescriptor,
+        CNContactUrlAddressesKey as CNKeyDescriptor,
+        CNContactFormatter.descriptorForRequiredKeys(for: .fullName)
+        ]
+    }
+
+    /// Projects a fetched `CNContact` into the wire DTO.
+    ///
+    /// Multi-value properties become empty arrays rather than `nil` when the
+    /// contact has none: the projection ran, so "none" is a fact about the
+    /// contact, not about what was fetched.
+    static func contactData(from contact: CNContact) -> ContactData {
+        func labelled<T>(_ values: [CNLabeledValue<T>], _ extract: (T) -> String) -> [LabeledValue] {
+            values.map { entry in
+                let label = entry.label.map { CNLabeledValue<NSString>.localizedString(forLabel: $0) }
+                return LabeledValue(label: label, value: extract(entry.value))
+            }
+        }
+
+        return ContactData(
+            id: contact.identifier,
+            displayName: CNContactFormatter.string(from: contact, style: .fullName) ?? "",
+            givenName: contact.givenName.isEmpty ? nil : contact.givenName,
+            familyName: contact.familyName.isEmpty ? nil : contact.familyName,
+            organization: contact.organizationName.isEmpty ? nil : contact.organizationName,
+            jobTitle: contact.jobTitle.isEmpty ? nil : contact.jobTitle,
+            note: nil,   // see `contactKeysToFetch` — notes need an Apple-granted entitlement
+            emails: labelled(contact.emailAddresses) { $0 as String },
+            phones: labelled(contact.phoneNumbers) { $0.stringValue },
+            urls: labelled(contact.urlAddresses) { $0 as String }
+        )
+    }
+    #endif
+
     // MARK: - Contact Operations
 
     public func fetchContacts(query: String, limit: Int) async throws -> [ContactData] {
         #if canImport(Contacts)
-        let keysToFetch: [CNKeyDescriptor] = [
-            CNContactIdentifierKey as CNKeyDescriptor,
-            CNContactGivenNameKey as CNKeyDescriptor,
-            CNContactFamilyNameKey as CNKeyDescriptor,
-            CNContactEmailAddressesKey as CNKeyDescriptor,
-            CNContactPhoneNumbersKey as CNKeyDescriptor,
-            CNContactFormatter.descriptorForRequiredKeys(for: .fullName)
-        ]
+        let keysToFetch = Self.contactKeysToFetch
 
         var contacts: [CNContact] = []
 
@@ -78,16 +221,7 @@ public actor ContactsAdapter: ContactsAdapterProtocol {
         }
 
         return contacts.prefix(limit).map { contact in
-            let displayName = CNContactFormatter.string(from: contact, style: .fullName) ?? ""
-            let email = contact.emailAddresses.first?.value as String?
-            let phone = contact.phoneNumbers.first?.value.stringValue
-
-            return ContactData(
-                id: contact.identifier,
-                displayName: displayName,
-                email: email,
-                phone: phone
-            )
+            return Self.contactData(from: contact)
         }
         #else
         throw PermissionError.contactsDenied
@@ -96,28 +230,12 @@ public actor ContactsAdapter: ContactsAdapterProtocol {
 
     public func fetchContact(id: String) async throws -> ContactData {
         #if canImport(Contacts)
-        let keysToFetch: [CNKeyDescriptor] = [
-            CNContactIdentifierKey as CNKeyDescriptor,
-            CNContactGivenNameKey as CNKeyDescriptor,
-            CNContactFamilyNameKey as CNKeyDescriptor,
-            CNContactEmailAddressesKey as CNKeyDescriptor,
-            CNContactPhoneNumbersKey as CNKeyDescriptor,
-            CNContactFormatter.descriptorForRequiredKeys(for: .fullName)
-        ]
+        let keysToFetch = Self.contactKeysToFetch
 
         do {
             let contact = try contactStore.unifiedContact(withIdentifier: id, keysToFetch: keysToFetch)
 
-            let displayName = CNContactFormatter.string(from: contact, style: .fullName) ?? ""
-            let email = contact.emailAddresses.first?.value as String?
-            let phone = contact.phoneNumbers.first?.value.stringValue
-
-            return ContactData(
-                id: contact.identifier,
-                displayName: displayName,
-                email: email,
-                phone: phone
-            )
+            return Self.contactData(from: contact)
         } catch CNError.recordDoesNotExist {
             throw ValidationError.notFound(resource: "contact", id: id)
         }

@@ -11,9 +11,9 @@
     <!-- Keep both in sync with AppleBridgeVersion.current (Sources/Core/Version.swift).
          VersionTests fails the build if they drift. -->
     <key>CFBundleVersion</key>
-    <string>3.0.15</string>
+    <string>3.1.0</string>
     <key>CFBundleShortVersionString</key>
-    <string>3.0.15</string>
+    <string>3.1.0</string>
     <key>CFBundleExecutable</key>
     <string>apple-bridge</string>
     <key>CFBundlePackageType</key>
@@ -44,7 +44,7 @@
     <string>Apple Bridge needs full access to your reminders to list, read, create, update, complete, and delete reminders on behalf of your AI assistant.</string>
 
     <key>NSContactsUsageDescription</key>
-    <string>Apple Bridge needs access to your contacts to search and retrieve contact information on behalf of your AI assistant.</string>
+    <string>Apple Bridge needs access to your contacts so your AI assistant can look up contact information and, when you ask it to, add or update contacts on your behalf.</string>
 
     <key>NSAppleEventsUsageDescription</key>
     <string>Apple Bridge needs to send Apple Events to control Mail and Maps applications on behalf of your AI assistant.</string>

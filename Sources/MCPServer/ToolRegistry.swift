@@ -57,7 +57,7 @@ public actor ToolRegistry {
         // Reminders tools (8) - Phase 6: Real handlers wired
         registerRemindersTools(into: &tools, services: services)
 
-        // Contacts tools (4) - Phase 7: Real handlers wired
+        // Contacts tools (6) - read + create/update
         registerContactsTools(into: &tools, services: services)
 
         // Notes tools (4) - Phase 9: Real handlers wired
@@ -387,7 +387,7 @@ public actor ToolRegistry {
         )
     }
 
-    // MARK: - Contacts Tools (4)
+    // MARK: - Contacts Tools (6)
 
     /// Registers contacts tools with real handlers (Phase 7).
     private static func registerContactsTools(into tools: inout [String: ToolEntry], services: any AppleServicesProtocol) {
@@ -444,6 +444,85 @@ public actor ToolRegistry {
             ]),
             handler: { args in await ContactsHandlers.openContact(services: services, arguments: args) }
         )
+
+        registerWithHandler(
+            into: &tools,
+            name: "contacts_create",
+            description: """
+                Create a new contact. Requires at least one of givenName, familyName, or displayName. \
+                Multi-value fields accept either a plain string array or [{label, value}] objects; \
+                pass `email` or `emails`, never both.
+                """,
+            inputSchema: .object([
+                "type": "object",
+                "properties": .object([
+                    "givenName": .object(["type": "string", "description": "Given (first) name"]),
+                    "familyName": .object(["type": "string", "description": "Family (last) name"]),
+                    "displayName": .object(["type": "string", "description": "Full name, used when no given/family name is supplied"]),
+                    "organization": .object(["type": "string", "description": "Organization or company"]),
+                    "jobTitle": .object(["type": "string", "description": "Job title"]),
+                    "note": .object(["type": "string", "description": "Free-form note; may contain newlines"]),
+                    "email": .object(["type": "string", "description": "Shorthand for a single unlabelled email address"]),
+                    "phone": .object(["type": "string", "description": "Shorthand for a single unlabelled phone number"]),
+                    "emails": Self.labeledValueSchema("Email addresses"),
+                    "phones": Self.labeledValueSchema("Phone numbers"),
+                    "urls": Self.labeledValueSchema("URLs")
+                ])
+            ]),
+            handler: { args in await ContactsHandlers.createContact(services: services, arguments: args) }
+        )
+
+        registerWithHandler(
+            into: &tools,
+            name: "contacts_update",
+            description: """
+                Update an existing contact. Omit a field to leave it unchanged; pass an empty string \
+                or empty array to clear it. A supplied collection REPLACES that collection rather than \
+                appending — to add an entry, send the existing entries alongside the new one.
+                """,
+            inputSchema: .object([
+                "type": "object",
+                "properties": .object([
+                    "id": .object(["type": "string", "description": "Contact ID"]),
+                    "givenName": .object(["type": "string", "description": "Given (first) name; empty string clears"]),
+                    "familyName": .object(["type": "string", "description": "Family (last) name; empty string clears"]),
+                    "organization": .object(["type": "string", "description": "Organization or company; empty string clears"]),
+                    "jobTitle": .object(["type": "string", "description": "Job title; empty string clears"]),
+                    "note": .object(["type": "string", "description": "Free-form note; empty string clears"]),
+                    "email": .object(["type": "string", "description": "Shorthand for a single unlabelled email address"]),
+                    "phone": .object(["type": "string", "description": "Shorthand for a single unlabelled phone number"]),
+                    "emails": Self.labeledValueSchema("Email addresses; empty array clears"),
+                    "phones": Self.labeledValueSchema("Phone numbers; empty array clears"),
+                    "urls": Self.labeledValueSchema("URLs; empty array clears")
+                ]),
+                "required": .array([.string("id")])
+            ]),
+            handler: { args in await ContactsHandlers.updateContact(services: services, arguments: args) }
+        )
+    }
+
+    /// Schema for a labelled multi-value field.
+    ///
+    /// Accepts a bare string (unlabelled) or a `{label, value}` object, matching
+    /// what `ContactsHandlers.labeledValues(from:key:)` decodes.
+    private static func labeledValueSchema(_ description: String) -> Value {
+        .object([
+            "type": "array",
+            "description": .string(description),
+            "items": .object([
+                "oneOf": .array([
+                    .object(["type": "string"]),
+                    .object([
+                        "type": "object",
+                        "properties": .object([
+                            "label": .object(["type": "string", "description": "Label such as home or work"]),
+                            "value": .object(["type": "string"])
+                        ]),
+                        "required": .array([.string("value")])
+                    ])
+                ])
+            ])
+        ])
     }
 
     // MARK: - Notes Tools (4)

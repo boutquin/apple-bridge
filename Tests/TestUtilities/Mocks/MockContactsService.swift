@@ -70,4 +70,62 @@ public actor MockContactsService: ContactsService {
 
         openedContactIds.append(id)
     }
+
+    // MARK: - Write Operations
+
+    /// Records every create/update call so tests can assert on what was sent.
+    public private(set) var createdContacts: [Contact] = []
+    public private(set) var updatedContacts: [(id: String, contact: Contact)] = []
+
+    public func create(_ contact: Contact) async throws -> Contact {
+        if let error = errorToThrow { throw error }
+        createdContacts.append(contact)
+
+        guard contact.givenName?.isEmpty == false || contact.familyName?.isEmpty == false
+                || !contact.displayName.isEmpty else {
+            throw ValidationError.missingRequired(field: "givenName, familyName, or displayName")
+        }
+
+        let created = Contact(
+            id: "mock-contact-\(createdContacts.count)",
+            displayName: contact.displayName.isEmpty
+                ? [contact.givenName, contact.familyName].compactMap { $0 }.joined(separator: " ")
+                : contact.displayName,
+            givenName: contact.givenName,
+            familyName: contact.familyName,
+            organization: contact.organization,
+            jobTitle: contact.jobTitle,
+            note: contact.note,
+            emails: contact.emails ?? [],
+            phones: contact.phones ?? [],
+            urls: contact.urls ?? []
+        )
+        stubContacts.append(created)
+        return created
+    }
+
+    public func update(id: String, _ contact: Contact) async throws -> Contact {
+        if let error = errorToThrow { throw error }
+        updatedContacts.append((id: id, contact: contact))
+
+        guard let index = stubContacts.firstIndex(where: { $0.id == id }) else {
+            throw ValidationError.notFound(resource: "Contact", id: id)
+        }
+
+        let existing = stubContacts[index]
+        let merged = Contact(
+            id: existing.id,
+            displayName: existing.displayName,
+            givenName: contact.givenName ?? existing.givenName,
+            familyName: contact.familyName ?? existing.familyName,
+            organization: contact.organization ?? existing.organization,
+            jobTitle: contact.jobTitle ?? existing.jobTitle,
+            note: contact.note ?? existing.note,
+            emails: contact.emails ?? existing.emails,
+            phones: contact.phones ?? existing.phones,
+            urls: contact.urls ?? existing.urls
+        )
+        stubContacts[index] = merged
+        return merged
+    }
 }

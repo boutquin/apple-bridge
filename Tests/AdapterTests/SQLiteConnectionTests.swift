@@ -10,14 +10,16 @@ struct SQLiteConnectionTests {
     // MARK: - Test Fixture Path
 
     /// Path to the test-notes.sqlite fixture file.
-    /// Uses Bundle.module when available, falls back to hardcoded path.
+    /// Uses Bundle.module when available, falls back to a source-relative path.
     private var testNotesFixturePath: String {
         // Try Bundle.module first (works when package resources are properly configured)
         if let url = Bundle.module.url(forResource: "test-notes", withExtension: "sqlite", subdirectory: "Fixtures") {
             return url.path
         }
-        // Fallback to hardcoded path for development
-        return "/Users/pierre/Documents/Code/boutquin/apple-bridge/Tests/AdapterTests/Fixtures/test-notes.sqlite"
+        // Fallback: resolve relative to this source file
+        return URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/test-notes.sqlite").path
     }
 
     // MARK: - Read-Only Mode Tests
