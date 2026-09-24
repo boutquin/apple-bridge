@@ -1,6 +1,6 @@
 import Foundation
-import Core
-import Adapters
+import AppleBridgeCore
+import AppleBridgeMail
 
 /// Mock implementation of `MailAdapterProtocol` for testing.
 ///

@@ -1,5 +1,5 @@
 import Foundation
-import Core
+import AppleBridgeCore
 
 /// Implementation of `CalendarService` using EventKit via an adapter.
 ///

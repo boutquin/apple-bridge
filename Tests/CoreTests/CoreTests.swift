@@ -1,4 +1,4 @@
 import Testing
-@testable import Core
+@testable import AppleBridgeCore
 
 // CoreTests placeholder - tests will be added in Phase 1

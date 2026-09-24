@@ -1,6 +1,6 @@
 import Foundation
-import Core
-import Adapters
+import AppleBridgeCore
+import AppleBridgeEventKit
 
 /// Mock implementation of `CalendarAdapterProtocol` for testing.
 ///

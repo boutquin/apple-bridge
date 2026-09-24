@@ -89,6 +89,23 @@ jobs:
       - name: Run Tests
         run: swift test
 
+      # Builds Tests/LibraryConsumer, a stand-in outside package that depends on
+      # the library products. Proves they resolve as a dependency, coexist with
+      # a consumer's own `Core` / `Adapters` targets, and that Contacts +
+      # EventKit do not link sqlite3 — the reason Adapters was split by surface.
+      - name: Library products (consumer build)
+        run: |
+          set -euo pipefail
+          swift build --package-path Tests/LibraryConsumer
+          BIN="$(swift build --package-path Tests/LibraryConsumer --show-bin-path)/library-consumer"
+          LINKS=$(otool -L "$BIN")
+          echo "$LINKS"
+          if grep -qi sqlite <<<"$LINKS"; then
+            echo "::error::A Contacts + EventKit consumer links sqlite3; a library target gained a SQLite dependency."
+            exit 1
+          fi
+          "$BIN"
+
       # Folded in from a standalone `lint` job. The check itself takes ~18
       # seconds, but as its own macOS job it was billed the 1-minute minimum
       # against the 10x multiplier — ten minutes per trigger to parse a

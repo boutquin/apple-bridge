@@ -1,5 +1,5 @@
 import Foundation
-import Core
+import AppleBridgeCore
 
 /// Protocol defining the services container interface.
 ///

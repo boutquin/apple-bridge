@@ -1,5 +1,5 @@
 import Foundation
-import Core
+import AppleBridgeCore
 
 /// AppleScript-based implementation of `MailService`.
 ///

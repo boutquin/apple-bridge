@@ -1,7 +1,7 @@
 import Testing
 import Foundation
-@testable import Adapters
-@testable import Core
+@testable import AppleBridgeNotes
+@testable import AppleBridgeCore
 
 /// Tests for `NotesSQLiteService`, the SQLite-based Notes implementation.
 ///

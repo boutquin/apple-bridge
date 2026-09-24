@@ -2,7 +2,7 @@ import Testing
 import Foundation
 import MCP
 @testable import MCPServer
-@testable import Core
+@testable import AppleBridgeCore
 @testable import TestUtilities
 
 /// Tests for Messages MCP tool handlers.

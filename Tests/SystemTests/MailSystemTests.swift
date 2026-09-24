@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-import Adapters
+import AppleBridgeMail
 
 /// System tests for Mail domain using real AppleScript.
 ///

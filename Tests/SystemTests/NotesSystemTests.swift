@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-import Adapters
+import AppleBridgeNotes
 
 /// System tests for Notes domain using real SQLite database.
 ///

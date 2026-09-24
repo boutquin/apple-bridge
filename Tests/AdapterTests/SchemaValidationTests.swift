@@ -1,7 +1,7 @@
 import Testing
 import Foundation
-@testable import Adapters
-import Core
+@testable import AppleBridgeSQLite
+import AppleBridgeCore
 
 /// Tests for SQLite schema validation utilities
 @Suite("Schema Validation Tests")

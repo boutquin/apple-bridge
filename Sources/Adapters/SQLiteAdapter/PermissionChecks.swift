@@ -1,5 +1,5 @@
 import Foundation
-import Core
+import AppleBridgeCore
 
 /// Utilities for checking macOS permissions and database access.
 ///

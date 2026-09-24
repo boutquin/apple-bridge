@@ -1,5 +1,5 @@
 import Foundation
-import Core
+import AppleBridgeCore
 
 // MARK: - Notes Data Transfer Objects
 

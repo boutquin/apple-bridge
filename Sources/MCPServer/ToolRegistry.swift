@@ -1,6 +1,6 @@
 import Foundation
 import MCP
-import Core
+import AppleBridgeCore
 
 /// Registry of all MCP tools available in apple-bridge.
 ///

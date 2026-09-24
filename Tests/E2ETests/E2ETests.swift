@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-import Core
+import AppleBridgeCore
 
 /// End-to-end tests for the apple-bridge MCP server.
 ///

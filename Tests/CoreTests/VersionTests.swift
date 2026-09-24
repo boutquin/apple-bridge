@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import Core
+@testable import AppleBridgeCore
 
 /// Guards the version single-source-of-truth.
 ///

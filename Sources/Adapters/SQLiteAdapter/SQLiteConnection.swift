@@ -1,6 +1,6 @@
 import Foundation
 import SQLite3
-import Core
+import AppleBridgeCore
 
 /// A lightweight wrapper around SQLite3 for database access.
 ///

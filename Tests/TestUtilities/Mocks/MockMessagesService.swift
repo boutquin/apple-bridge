@@ -1,5 +1,5 @@
 import Foundation
-import Core
+import AppleBridgeCore
 
 /// Mock implementation of `MessagesService` for testing.
 public actor MockMessagesService: MessagesService {

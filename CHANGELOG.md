@@ -2,7 +2,43 @@
 
 All notable changes to apple-bridge are recorded here. Versions follow
 [Semantic Versioning](https://semver.org/); the number is single-sourced in
-`Sources/Core/Version.swift` and mirrored into `Info.plist`.
+`Sources/Core/Version.swift` and mirrored into `Info.plist`. Since 3.2.0 the
+number also covers the public API of the library products: a breaking change
+to them is a major version.
+
+## [3.2.0] — 2026-09-24
+
+### Added
+
+- Library products for building on apple-bridge from another Swift package:
+
+  | Product | Module | Contents |
+  |---|---|---|
+  | `AppleBridgeCore` | `AppleBridgeCore` | Models, errors, service protocols |
+  | `AppleBridgeContacts` | `AppleBridgeContacts` | `ContactsAdapter` (CNContactStore), `AppleScriptContactsAdapter`, `ContactsFrameworkService` |
+  | `AppleBridgeEventKit` | `AppleBridgeEventKit` | `EventKitAdapter`, calendar and reminders services |
+
+  Contacts and EventKit consumers do not link sqlite3. Other adapters
+  (Mail, Maps, Messages, Notes) remain internal to the executable.
+- Round-trip system tests for the `CNContactStore` write path, now that it is
+  public API rather than an unused alternative to the AppleScript adapter.
+
+### Changed
+
+- Modules are prefixed so they cannot collide with a consumer's own targets:
+  `Core` is now `AppleBridgeCore`, and the single `Adapters` module is split
+  into one module per surface. Code that built against a local branch using
+  `import Core` / `import Adapters` needs the new names.
+
+### Fixed
+
+- `ContactsAdapter` (CNContactStore) stored standard labels as custom ones:
+  `"work"` became a custom label spelled "work" rather than Contacts' Work
+  label. Standard names (`home`, `work`, `mobile`, `iphone`, `homepage`, …) now
+  map to the Contacts constants.
+- `ContactsAdapter` returned labels translated into the system language
+  (`"travail"` on a French Mac). It now returns the same locale-independent
+  labels as the AppleScript adapter.
 
 ## [3.1.0] — 2026-09-23
 

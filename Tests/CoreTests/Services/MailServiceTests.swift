@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import Core
+@testable import AppleBridgeCore
 import TestUtilities
 
 @Suite("MailService Protocol Tests")

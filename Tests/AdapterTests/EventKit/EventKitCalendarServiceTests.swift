@@ -1,7 +1,7 @@
 import Testing
 import Foundation
-@testable import Adapters
-@testable import Core
+@testable import AppleBridgeEventKit
+@testable import AppleBridgeCore
 
 @Suite("EventKitCalendarService Tests")
 struct EventKitCalendarServiceTests {

@@ -1,7 +1,12 @@
 import Foundation
 import MCP
-import Core
-import Adapters
+import AppleBridgeCore
+import AppleBridgeContacts
+import AppleBridgeEventKit
+import AppleBridgeMail
+import AppleBridgeMaps
+import AppleBridgeMessages
+import AppleBridgeNotes
 import MCPServer
 
 /// The apple-bridge MCP server version.

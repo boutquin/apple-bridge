@@ -1,5 +1,5 @@
 import Foundation
-import Core
+import AppleBridgeCore
 
 #if canImport(EventKit)
 import EventKit

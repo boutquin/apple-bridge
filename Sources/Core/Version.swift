@@ -19,5 +19,5 @@ import Foundation
 /// number prefixed by `v`. The full procedure is in `docs/code-signing.md`.
 public enum AppleBridgeVersion {
     /// The canonical version string, in `MAJOR.MINOR.PATCH` form.
-    public static let current = "3.1.0"
+    public static let current = "3.2.0"
 }

@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-import Adapters
+import AppleBridgeMaps
 
 /// System tests for Maps domain using MapKit.
 ///

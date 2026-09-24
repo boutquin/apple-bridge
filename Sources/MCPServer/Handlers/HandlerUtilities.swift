@@ -1,6 +1,6 @@
 import Foundation
 import MCP
-import Core
+import AppleBridgeCore
 
 /// Shared utilities for MCP tool handlers.
 ///

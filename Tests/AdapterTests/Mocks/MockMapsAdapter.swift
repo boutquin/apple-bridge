@@ -1,6 +1,6 @@
 import Foundation
-import Core
-import Adapters
+import AppleBridgeCore
+import AppleBridgeMaps
 
 /// Mock implementation of `MapsAdapterProtocol` for testing.
 ///

@@ -1,5 +1,7 @@
 import Foundation
-import Core
+import AppleBridgeCore
+import AppleBridgeAppleScript
+import AppleBridgeSQLite
 
 /// Hybrid SQLite+AppleScript implementation of `MessagesAdapterProtocol`.
 ///

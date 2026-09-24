@@ -1,5 +1,5 @@
 import Foundation
-import Core
+import AppleBridgeCore
 
 /// Mock implementation of `MapsService` for testing.
 public actor MockMapsService: MapsService {

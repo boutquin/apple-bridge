@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import Core
+@testable import AppleBridgeCore
 
 /// Tests that verify all domain models conform to Sendable.
 /// These are compile-time checks that ensure models can be safely

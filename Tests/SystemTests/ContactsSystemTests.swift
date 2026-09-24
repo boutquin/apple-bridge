@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-import Adapters
+import AppleBridgeContacts
 
 /// System tests for Contacts domain using real Contacts framework.
 ///

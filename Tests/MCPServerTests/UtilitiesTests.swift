@@ -1,5 +1,5 @@
 import Testing
-import Core
+import AppleBridgeCore
 @testable import MCPServer
 
 @Suite("Utilities Tests")

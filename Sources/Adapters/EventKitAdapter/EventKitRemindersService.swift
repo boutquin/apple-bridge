@@ -1,5 +1,5 @@
 import Foundation
-import Core
+import AppleBridgeCore
 
 /// Implementation of `RemindersService` using EventKit via an adapter.
 ///

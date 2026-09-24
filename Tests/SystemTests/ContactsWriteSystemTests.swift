@@ -1,7 +1,7 @@
 import Foundation
 import Testing
-import Adapters
-import Core
+import AppleBridgeContacts
+import AppleBridgeCore
 
 /// End-to-end round-trip tests for `contacts_create` / `contacts_update`.
 ///
@@ -21,7 +21,7 @@ import Core
 ///   / the IDE) in System Settings, not under apple-bridge, because the grant
 ///   attaches to the responsible parent process
 /// - Contacts.app running: `osascript` does not auto-launch its target, and a
-///   closed app surfaces as an opaque `Core.AppleScriptError error 0`
+///   closed app surfaces as an opaque `AppleBridgeCore.AppleScriptError error 0`
 ///
 /// ## These tests write to the real address book
 ///

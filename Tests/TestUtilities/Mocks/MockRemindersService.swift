@@ -1,5 +1,5 @@
 import Foundation
-import Core
+import AppleBridgeCore
 
 /// Mock implementation of `RemindersService` for testing.
 ///

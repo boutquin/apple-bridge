@@ -1,5 +1,5 @@
 import Foundation
-import Core
+import AppleBridgeCore
 import MCPServer
 
 // MARK: - Calendar Factories

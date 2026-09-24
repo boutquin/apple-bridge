@@ -1,7 +1,7 @@
 import Testing
 import Foundation
-@testable import Adapters
-@testable import Core
+@testable import AppleBridgeMail
+@testable import AppleBridgeCore
 import TestUtilities
 
 /// Tests for `MailAppleScriptService`.

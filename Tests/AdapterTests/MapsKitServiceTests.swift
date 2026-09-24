@@ -1,7 +1,7 @@
 import Testing
 import Foundation
-@testable import Adapters
-@testable import Core
+@testable import AppleBridgeMaps
+@testable import AppleBridgeCore
 import TestUtilities
 
 @Suite("MapsKitService Tests")

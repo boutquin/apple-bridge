@@ -1,6 +1,6 @@
 import Foundation
-import Core
-import Adapters
+import AppleBridgeCore
+import AppleBridgeNotes
 
 /// Mock implementation of `NotesAdapterProtocol` for testing.
 ///

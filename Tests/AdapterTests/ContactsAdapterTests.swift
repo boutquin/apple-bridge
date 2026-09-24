@@ -1,8 +1,11 @@
 import Testing
 import Foundation
-import Core
-@testable import Adapters
+import AppleBridgeCore
+@testable import AppleBridgeContacts
 @testable import TestUtilities
+#if canImport(Contacts)
+import Contacts
+#endif
 
 /// Tests for `ContactsAdapterProtocol` and `ContactsFrameworkService`.
 @Suite("Contacts Adapter Tests")
@@ -206,6 +209,38 @@ struct ContactsAdapterTests {
         #expect(AppleScriptContactsAdapter.normalizeLabel("") == nil)
         #expect(AppleScriptContactsAdapter.normalizeLabel("_$!<>!$_") == nil)
     }
+
+    // MARK: - CNContactStore label mapping
+
+    #if canImport(Contacts)
+    @Test("Standard wire labels are stored as Contacts' constants, case-insensitively")
+    func storesStandardLabelsAsConstants() {
+        #expect(ContactsAdapter.storedLabel("work") == CNLabelWork)
+        #expect(ContactsAdapter.storedLabel("Home") == CNLabelHome)
+        #expect(ContactsAdapter.storedLabel("mobile") == CNLabelPhoneNumberMobile)
+        #expect(ContactsAdapter.storedLabel("iphone") == CNLabelPhoneNumberiPhone)
+        #expect(ContactsAdapter.storedLabel("homepage") == CNLabelURLAddressHomePage)
+        #expect(ContactsAdapter.storedLabel("homefax") == CNLabelPhoneNumberHomeFax)
+    }
+
+    @Test("Custom and empty labels are not mapped")
+    func keepsCustomLabels() {
+        #expect(ContactsAdapter.storedLabel("Conference") == "Conference")
+        #expect(ContactsAdapter.storedLabel("") == nil)
+        #expect(ContactsAdapter.storedLabel(nil) == nil)
+    }
+
+    /// Reading must not depend on the system language: every standard constant
+    /// comes back as the same wire label the write side accepts.
+    @Test("Every standard constant round-trips through wire and stored form")
+    func standardLabelsRoundTrip() {
+        for (wire, constant) in ContactsAdapter.standardLabels {
+            #expect(ContactsAdapter.wireLabel(constant)?.lowercased() == wire)
+            #expect(ContactsAdapter.storedLabel(ContactsAdapter.wireLabel(constant)) == constant)
+        }
+        #expect(ContactsAdapter.standardLabels.count == 13, "one entry per constant; no key collisions")
+    }
+    #endif
 
     // MARK: - Write script building
 

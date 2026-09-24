@@ -1,7 +1,7 @@
 import Testing
 import Foundation
-@testable import Adapters
-@testable import Core
+@testable import AppleBridgeAppleScript
+@testable import AppleBridgeCore
 
 /// Tests for `AppleScriptRunner`, the actor for executing AppleScript.
 ///

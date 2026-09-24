@@ -1,7 +1,7 @@
 import Foundation
 import Testing
-import Adapters
-import Core
+import AppleBridgeEventKit
+import AppleBridgeCore
 
 /// System tests for Calendar domain using real EventKit.
 ///

@@ -1,7 +1,7 @@
 import Foundation
 import Testing
-import Adapters
-import Core
+import AppleBridgeAppleScript
+import AppleBridgeCore
 
 #if canImport(Contacts)
 import Contacts

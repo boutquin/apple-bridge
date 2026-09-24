@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-import Adapters
+import AppleBridgeMessages
 
 /// System tests for Messages domain using real SQLite database.
 ///

@@ -1,6 +1,6 @@
 import Foundation
 import MCP
-import Core
+import AppleBridgeCore
 
 /// Handlers for reminders MCP tools.
 ///

@@ -1,6 +1,6 @@
 import Foundation
 import MCP
-import Core
+import AppleBridgeCore
 
 /// MCP handlers for Messages domain tools.
 ///

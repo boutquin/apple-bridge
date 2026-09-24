@@ -1,5 +1,6 @@
 import Foundation
-import Core
+import AppleBridgeCore
+import AppleBridgeAppleScript
 
 /// AppleScript implementation of `NotesAdapterProtocol`.
 ///

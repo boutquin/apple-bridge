@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import Core
+@testable import AppleBridgeCore
 
 @Suite("Reminder Tests")
 struct ReminderTests {

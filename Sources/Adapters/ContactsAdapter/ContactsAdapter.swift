@@ -1,5 +1,5 @@
 import Foundation
-import Core
+import AppleBridgeCore
 
 #if canImport(Contacts)
 import Contacts
@@ -115,19 +115,59 @@ public actor ContactsAdapter: ContactsAdapterProtocol {
 
         if let emails = data.emails {
             contact.emailAddresses = emails.map {
-                CNLabeledValue(label: $0.label, value: $0.value as NSString)
+                CNLabeledValue(label: storedLabel($0.label), value: $0.value as NSString)
             }
         }
         if let phones = data.phones {
             contact.phoneNumbers = phones.map {
-                CNLabeledValue(label: $0.label, value: CNPhoneNumber(stringValue: $0.value))
+                CNLabeledValue(label: storedLabel($0.label), value: CNPhoneNumber(stringValue: $0.value))
             }
         }
         if let urls = data.urls {
             contact.urlAddresses = urls.map {
-                CNLabeledValue(label: $0.label, value: $0.value as NSString)
+                CNLabeledValue(label: storedLabel($0.label), value: $0.value as NSString)
             }
         }
+    }
+
+    // MARK: - Labels
+
+    /// Contacts' standard labels, keyed by the wire form callers use
+    /// (`"work"`, `"mobile"`, `"homepage"`, …), matched case-insensitively.
+    ///
+    /// A caller's `"work"` must be stored as `CNLabelWork` (`_$!<Work>!$_`):
+    /// stored literally it becomes a *custom* label spelled "work", which
+    /// Contacts.app and every other reader treat as a different label.
+    static var standardLabels: [String: String] {
+        let constants = [
+            CNLabelHome, CNLabelWork, CNLabelSchool, CNLabelOther,
+            CNLabelEmailiCloud,
+            CNLabelPhoneNumberMobile, CNLabelPhoneNumberiPhone, CNLabelPhoneNumberMain,
+            CNLabelPhoneNumberHomeFax, CNLabelPhoneNumberWorkFax, CNLabelPhoneNumberOtherFax,
+            CNLabelPhoneNumberPager,
+            CNLabelURLAddressHomePage,
+        ]
+        return Dictionary(
+            constants.compactMap { constant in
+                wireLabel(constant).map { ($0.lowercased(), constant) }
+            },
+            uniquingKeysWith: { first, _ in first }
+        )
+    }
+
+    /// The label to store for a caller-supplied one: a standard name maps to
+    /// its Contacts constant, anything else is kept as a custom label.
+    static func storedLabel(_ label: String?) -> String? {
+        guard let label, !label.isEmpty else { return nil }
+        return standardLabels[label.lowercased()] ?? label
+    }
+
+    /// The label to return for a stored one — the same locale-independent
+    /// normalization the AppleScript adapter applies, so both conformances emit
+    /// `"work"` for `_$!<Work>!$_` on every system language. (The framework's
+    /// `localizedString(forLabel:)` would return `"travail"` on a French system.)
+    static func wireLabel(_ raw: String?) -> String? {
+        raw.flatMap(AppleScriptContactsAdapter.normalizeLabel)
     }
     #endif
 
@@ -177,8 +217,7 @@ public actor ContactsAdapter: ContactsAdapterProtocol {
     static func contactData(from contact: CNContact) -> ContactData {
         func labelled<T>(_ values: [CNLabeledValue<T>], _ extract: (T) -> String) -> [LabeledValue] {
             values.map { entry in
-                let label = entry.label.map { CNLabeledValue<NSString>.localizedString(forLabel: $0) }
-                return LabeledValue(label: label, value: extract(entry.value))
+                LabeledValue(label: wireLabel(entry.label), value: extract(entry.value))
             }
         }
 

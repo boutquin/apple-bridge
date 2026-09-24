@@ -68,10 +68,10 @@ Apple Bridge requires various macOS permissions depending on which domains you u
 Apple Bridge is normally launched as a **child process of an MCP host**, and that changes where the
 permissions live. Everything below was verified on macOS 15 with Claude Desktop on 2026-08-05.
 
-**1. Grant to the host app, not to `apple-bridge`.** The binary is ad-hoc/linker-signed
-(`TeamIdentifier=not set`), so it has no TCC identity of its own and **never appears in System
-Settings under its own name**. macOS attributes its requests to the *responsible process* — the host
-app at the top of the ancestry chain:
+**1. Grant to the host app, not to `apple-bridge`.** macOS attributes a child process's requests to
+its *responsible process* — the host app at the top of the ancestry chain — so the bridge **never
+appears in System Settings under its own name**, whether the binary is ad-hoc or Developer ID
+signed:
 
 ```
 apple-bridge → claude (com.anthropic.claude-code) → disclaimer → /Applications/Claude.app
@@ -107,7 +107,7 @@ cached verdict until they respawn too.
 **6. AppleScript-backed domains need the target app running.** Contacts, Notes, Messages, and Mail
 are driven via `osascript`, which does **not** auto-launch its target. If the app is closed, the
 underlying `-600 "Application isn't running"` currently surfaces as an opaque
-`Core.AppleScriptError error 0`. Launch the app (`open -g -a Contacts`) and retry.
+`AppleBridgeCore.AppleScriptError error 0`. Launch the app (`open -g -a Contacts`) and retry.
 
 ### Code signing
 
@@ -163,6 +163,42 @@ Add to your `claude_desktop_config.json`:
   }
 }
 ```
+
+## Using apple-bridge as a Swift library
+
+Three library products let another package reuse the models and adapters without the MCP server:
+
+| Product | Import | Contents |
+|---|---|---|
+| `AppleBridgeCore` | `import AppleBridgeCore` | Models (`Contact`, `CalendarEvent`, `Reminder`, …), errors, service protocols |
+| `AppleBridgeContacts` | `import AppleBridgeContacts` | `ContactsAdapter` (CNContactStore, in-process), `AppleScriptContactsAdapter`, `ContactsFrameworkService` |
+| `AppleBridgeEventKit` | `import AppleBridgeEventKit` | `EventKitAdapter`, `EventKitCalendarService`, `EventKitRemindersService` |
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/boutquin/apple-bridge.git", from: "3.2.0"),
+],
+targets: [
+    .target(name: "MyApp", dependencies: [
+        .product(name: "AppleBridgeContacts", package: "apple-bridge"),
+        .product(name: "AppleBridgeEventKit", package: "apple-bridge"),
+    ]),
+]
+```
+
+- **Permissions belong to your app.** `ContactsAdapter` and `EventKitAdapter` run in your process, so
+  macOS attributes their requests to your app (its responsible process), not to apple-bridge. Your
+  app needs the usage-description keys (`NSContactsUsageDescription`,
+  `NSCalendarsFullAccessUsageDescription`, `NSRemindersFullAccessUsageDescription`). If it is
+  signed with the hardened runtime, it also needs the matching entitlements; see
+  `AppleBridge.entitlements`.
+- **`ContactsAdapter` does not read or write notes.** That property requires Apple's restricted
+  `com.apple.developer.contacts.notes` entitlement. `AppleScriptContactsAdapter` handles notes over
+  Automation instead.
+- **Only what you import is linked.** Contacts and EventKit do not pull in sqlite3; CI builds a
+  stand-in consumer (`Tests/LibraryConsumer`) to keep it that way.
+- **Versioning.** The public API of these products follows [Semantic Versioning](https://semver.org/)
+  together with the server: a breaking change to them is a major version.
 
 ## Development
 
@@ -238,16 +274,17 @@ swift test --filter FDA
 apple-bridge/
 ├── Sources/
 │   ├── apple-bridge/       # Main executable
-│   ├── Core/               # Domain models, service protocols, errors
-│   ├── Adapters/           # macOS framework adapters (see Architecture)
+│   ├── Core/               # AppleBridgeCore: domain models, service protocols, errors
+│   ├── Adapters/           # One module per surface (see Adapter File Locations)
 │   └── MCPServer/          # MCP protocol implementation and handlers
 ├── Tests/
-│   ├── CoreTests/          # Unit tests for Core
-│   ├── AdapterTests/       # Unit tests for Adapters
+│   ├── CoreTests/          # Unit tests for AppleBridgeCore
+│   ├── AdapterTests/       # Unit tests for the adapter modules
 │   ├── MCPServerTests/     # Unit tests for MCP handlers
 │   ├── E2ETests/           # End-to-end protocol tests
 │   ├── SystemTests/        # Real macOS integration tests
-│   └── TestUtilities/      # Shared test helpers
+│   ├── TestUtilities/      # Shared test helpers
+│   └── LibraryConsumer/    # Stand-in outside package; CI builds it against the library products
 ├── docs/
 │   └── code-signing.md     # Certificates, notarization, what signing fixes
 └── scripts/
@@ -414,41 +451,46 @@ func searchNotes() async throws {
 
 ### Adapter File Locations
 
+Each folder is its own module (named in brackets), so a library consumer links
+only the surfaces it uses. Only SQLite, Notes, and Messages link sqlite3.
+
 ```
 Sources/Adapters/
-├── EventKitAdapter/
-│   ├── CalendarAdapterProtocol.swift    # Protocol + Calendar/Reminder DTOs
+├── EventKitAdapter/                     [AppleBridgeEventKit — library product]
+│   ├── EventKitAdapterProtocol.swift    # Protocol + Calendar/Reminder DTOs
 │   ├── EventKitAdapter.swift            # EventKit implementation
 │   ├── EventKitCalendarService.swift    # CalendarService using adapter
 │   └── EventKitRemindersService.swift   # RemindersService using adapter
-├── ContactsAdapter/
+├── ContactsAdapter/                     [AppleBridgeContacts — library product]
 │   ├── ContactsAdapterProtocol.swift    # Protocol + ContactData DTO
-│   ├── ContactsAdapter.swift            # Contacts framework implementation (requires signed binary)
-│   ├── AppleScriptContactsAdapter.swift # AppleScript implementation (default)
+│   ├── ContactsAdapter.swift            # CNContactStore implementation (in-process; no notes)
+│   ├── AppleScriptContactsAdapter.swift # AppleScript implementation (the MCP server's default)
 │   └── ContactsFrameworkService.swift   # ContactsService using adapter
-├── NotesAdapter/
-│   ├── NotesAdapterProtocol.swift       # Protocol + NoteData DTO
-│   ├── SQLiteNotesAdapter.swift         # SQLite implementation (requires Full Disk Access)
-│   └── AppleScriptNotesAdapter.swift    # AppleScript implementation (default)
-├── MessagesAdapter/
-│   ├── MessagesAdapterProtocol.swift    # Protocol + MessageData/ChatData DTOs
-│   ├── HybridMessagesAdapter.swift      # SQLite (read) + AppleScript (send) (requires FDA)
-│   └── AppleScriptMessagesAdapter.swift # AppleScript implementation (default, partial)
-├── MailAdapter/
+├── AppleScriptAdapter/                  [AppleBridgeAppleScript]
+│   └── AppleScriptRunner.swift          # Actor for script execution
+├── MailAdapter/                         [AppleBridgeMail]
 │   ├── MailAdapterProtocol.swift        # Protocol + EmailData DTO
-│   └── AppleScriptMailAdapter.swift     # AppleScript implementation
-├── MapsAdapter/
+│   ├── AppleScriptMailAdapter.swift     # AppleScript implementation
+│   └── MailAppleScriptService.swift     # MailService using MailAdapter
+├── MapsAdapter/                         [AppleBridgeMaps]
 │   ├── MapsAdapterProtocol.swift        # Protocol + LocationData DTO
 │   ├── MapKitAdapter.swift              # MapKit implementation
 │   └── MapsKitService.swift             # MapsService using MapKitAdapter
-├── SQLiteAdapter/
-│   ├── SQLiteConnection.swift           # Low-level SQLite wrapper
-│   ├── SchemaValidation.swift           # Database schema validation
-│   ├── NotesSQLiteService.swift         # NotesService using NotesAdapter
+├── MessagesAdapter/                     [AppleBridgeMessages]
+│   ├── MessagesAdapterProtocol.swift    # Protocol + MessageData/ChatData DTOs
+│   ├── HybridMessagesAdapter.swift      # SQLite (read) + AppleScript (send) (requires FDA)
+│   ├── AppleScriptMessagesAdapter.swift # AppleScript implementation (default, partial)
 │   └── MessagesSQLiteService.swift      # MessagesService using MessagesAdapter
-└── AppleScriptAdapter/
-    ├── AppleScriptRunner.swift          # Actor for script execution
-    └── MailAppleScriptService.swift     # MailService using MailAdapter
+├── NotesAdapter/                        [AppleBridgeNotes]
+│   ├── NotesAdapterProtocol.swift       # Protocol + NoteData DTO
+│   ├── SQLiteNotesAdapter.swift         # SQLite implementation (requires Full Disk Access)
+│   ├── AppleScriptNotesAdapter.swift    # AppleScript implementation (default)
+│   └── NotesSQLiteService.swift         # NotesService using NotesAdapter
+└── SQLiteAdapter/                       [AppleBridgeSQLite]
+    ├── SQLiteConnection.swift           # Low-level SQLite wrapper
+    ├── SchemaValidation.swift           # Database schema validation
+    ├── PermissionChecks.swift           # Full Disk Access probes
+    └── FieldsProjection.swift           # Requested-field validation
 ```
 
 ### Swift 6 Concurrency

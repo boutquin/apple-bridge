@@ -1,5 +1,6 @@
 import Foundation
-import Core
+import AppleBridgeCore
+import AppleBridgeSQLite
 
 /// SQLite implementation of `NotesAdapterProtocol`.
 ///

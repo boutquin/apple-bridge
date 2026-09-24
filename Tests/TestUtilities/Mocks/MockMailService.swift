@@ -1,5 +1,5 @@
 import Foundation
-import Core
+import AppleBridgeCore
 
 /// Mock implementation of `MailService` for testing.
 public actor MockMailService: MailService {

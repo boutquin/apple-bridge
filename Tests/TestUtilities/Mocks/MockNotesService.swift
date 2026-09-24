@@ -1,5 +1,5 @@
 import Foundation
-import Core
+import AppleBridgeCore
 
 /// Mock implementation of `NotesService` for testing.
 public actor MockNotesService: NotesService {

@@ -1,7 +1,7 @@
 import Testing
 import Foundation
 @testable import MCPServer
-@testable import Core
+@testable import AppleBridgeCore
 import TestUtilities
 import MCP
 

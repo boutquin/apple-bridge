@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-import Adapters
+import AppleBridgeEventKit
 
 /// System tests for Reminders domain using real EventKit.
 ///

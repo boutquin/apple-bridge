@@ -1,6 +1,6 @@
 import Foundation
-import Core
-import Adapters
+import AppleBridgeCore
+import AppleBridgeContacts
 
 /// Mock implementation of `ContactsAdapterProtocol` for testing.
 ///

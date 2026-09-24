@@ -1,5 +1,5 @@
 import Foundation
-import Core
+import AppleBridgeCore
 
 /// Mock implementation of `ContactsService` for testing.
 public actor MockContactsService: ContactsService {

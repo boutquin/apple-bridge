@@ -11,9 +11,9 @@
     <!-- Keep both in sync with AppleBridgeVersion.current (Sources/Core/Version.swift).
          VersionTests fails the build if they drift. -->
     <key>CFBundleVersion</key>
-    <string>3.1.0</string>
+    <string>3.2.0</string>
     <key>CFBundleShortVersionString</key>
-    <string>3.1.0</string>
+    <string>3.2.0</string>
     <key>CFBundleExecutable</key>
     <string>apple-bridge</string>
     <key>CFBundlePackageType</key>

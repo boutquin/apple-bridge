@@ -1,5 +1,5 @@
 import Foundation
-import Core
+import AppleBridgeCore
 
 // MARK: - Mail Data Transfer Objects
 

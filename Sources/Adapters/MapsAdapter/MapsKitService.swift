@@ -1,5 +1,5 @@
 import Foundation
-import Core
+import AppleBridgeCore
 
 /// Service layer implementation of `MapsService` using `MapsAdapterProtocol`.
 ///

@@ -1,5 +1,5 @@
 import Foundation
-import Core
+import AppleBridgeCore
 
 /// SQLite-based implementation of `MessagesService`.
 ///

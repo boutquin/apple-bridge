@@ -1,6 +1,6 @@
 import Foundation
 import MCP
-import Core
+import AppleBridgeCore
 
 /// Dispatches tool calls to the appropriate handlers with timeout protection.
 ///

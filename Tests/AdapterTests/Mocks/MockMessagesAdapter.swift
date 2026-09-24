@@ -1,6 +1,6 @@
 import Foundation
-import Core
-import Adapters
+import AppleBridgeCore
+import AppleBridgeMessages
 
 /// Mock implementation of `MessagesAdapterProtocol` for testing.
 ///

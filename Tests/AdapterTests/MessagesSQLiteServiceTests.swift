@@ -1,7 +1,7 @@
 import Testing
 import Foundation
-@testable import Adapters
-@testable import Core
+@testable import AppleBridgeMessages
+@testable import AppleBridgeCore
 
 /// Tests for `MessagesSQLiteService`, the SQLite-based Messages implementation.
 ///
